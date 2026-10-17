@@ -9,7 +9,7 @@ export async function currentIdentity() {
     client.from('profiles').select('id,email,full_name,profile_picture,display_name,is_excluded,kyc_status,created_at').eq('id', uid).single(),
     client.from('user_roles').select('role').eq('user_id', uid).single(),
   ]);
-  if (profileError || roleError || !profile || !role || profile.id !== uid || typeof profile.is_excluded !== 'boolean') {
+  if (profileError || roleError || !profile || !role || profile.id !== uid || typeof profile.is_excluded !== 'boolean' || !['player','tester','admin','superadmin'].includes(role.role)) {
     throw new Error('Account role or eligibility unavailable');
   }
   return {
