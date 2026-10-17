@@ -15,7 +15,7 @@ export default function PokerTournamentBuilder(){
  const [buyMax,setBuyMax]=useState(1000);
  const [message,setMessage]=useState("");
  const [working,setWorking]=useState(false);
- const [drafts,setDrafts]=useState<{id:string;name:string;format:string;status:string}[]>([]);
+ const [drafts,setDrafts]=useState<{id:string;name:string;format:string;status:string;version:number}[]>([]);
  const rowStyle={display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:12} as const;
  const fieldStyle={width:"100%",padding:8,boxSizing:"border-box"} as const;
  const numeric=(label:string,value:number,update:(v:number)=>void,min:number,max:number)=><label>{label}<input style={fieldStyle} type="number" min={min} max={max} step={1} value={value} onChange={e=>update(Number(e.target.value))}/></label>;
@@ -34,6 +34,18 @@ export default function PokerTournamentBuilder(){
   }catch(e){setMessage(e instanceof Error?e.message:"Draft creation failed");}
   finally{setWorking(false);}
  }
+ async function changeState(eventId:string,version:number,action:"publish"|"start"){
+  if(!supabase)return;
+  setWorking(true);setMessage("");
+  try{
+   const {data,error}=await supabase.functions.invoke("admin-poker-events",{body:{action,eventId,version,requestId:crypto.randomUUID()}});
+   if(error)throw error;
+   if(data?.error)throw Error(data.error);
+   setMessage(action==="publish"?"Registration opened for players.":"Seats assigned. Players can open their tables from Games.");
+   await load();
+  }catch(e){setMessage(e instanceof Error?e.message:"Event update failed");}
+  finally{setWorking(false);}
+ }
  async function load(){
   if(!supabase)return;
   const {data,error}=await supabase.functions.invoke("admin-poker-events",{body:{action:"list"}});
@@ -45,7 +57,7 @@ export default function PokerTournamentBuilder(){
   <p>Draft configuration only — no tournament registration, prizes, real buy-ins or live tables. Server verifies Superadmin role.</p>
   <div style={rowStyle}><label>Format<select style={fieldStyle} value={format} onChange={e=>{const f=e.target.value as Format;setFormat(f);if(f==="sit_and_go")setPlayers(seats);if(f==="ring"){setSeats(6);setPlayers(6);}}}><option value="scheduled_mtt">Scheduled multi-table tournament</option><option value="sit_and_go">Sit & Go</option><option value="ring">Cash-style ring table (practice chips)</option></select></label><label>Event name<input style={fieldStyle} value={name} maxLength={90} onChange={e=>setName(e.target.value)}/></label></div>
   <div style={rowStyle}>
-   {numeric("Maximum players",format==="sit_and_go"?seats:players,v=>setPlayers(v),2,format==="ring"?6:10000)}
+   {numeric("Maximum players",format==="sit_and_go"?seats:players,v=>setPlayers(v),2,6000)}
    {numeric("Seats per table",seats,v=>{setSeats(v);if(format==="sit_and_go")setPlayers(v);},2,format==="ring"?6:10)}
    {numeric("Starting practice stack",stack,setStack,100,1000000)}
    {numeric("Small blind",small,setSmall,1,100000)}
@@ -56,6 +68,6 @@ export default function PokerTournamentBuilder(){
   {format==="ring"&&<div style={rowStyle}>{numeric("Minimum practice buy-in",buyMin,setBuyMin,20*big,1000000)}{numeric("Maximum practice buy-in",buyMax,setBuyMax,buyMin,1000000)}</div>}
   <div style={{display:"flex",flexWrap:"wrap",gap:12,marginTop:16}}><button disabled={working||!supabase} onClick={()=>void create()}>{working?"Creating…":"Create draft (Superadmin)"}</button><button disabled={working||!supabase} onClick={()=>void load()}>Refresh drafts</button></div>
   {message&&<p role="status">{message}</p>}
-  {!!drafts.length&&<div><h3>Saved staging drafts</h3><ul>{drafts.map(d=><li key={d.id}>{d.name} — {d.format} / {d.status} — {d.id}</li>)}</ul></div>}
+  {!!drafts.length&&<div><h3>Saved staging drafts</h3><ul>{drafts.map(d=><li key={d.id} style={{marginBottom:12}}><strong>{d.name}</strong> — {d.format} / {d.status} — {d.id} {d.status==="draft"&&<button disabled={working} onClick={()=>void changeState(d.id,d.version,"publish")}>Publish registration</button>} {d.status==="registration"&&<button disabled={working} onClick={()=>void changeState(d.id,d.version,"start")}>Seat players & start</button>}</li>)}</ul></div>}
  </section>;
 }
