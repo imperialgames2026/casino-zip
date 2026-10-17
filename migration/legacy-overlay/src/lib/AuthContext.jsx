@@ -18,7 +18,7 @@ export function AuthProvider({ children }) {
       setError(null);
     } catch (err) {
       setUser(null);
-      setError({ type: supabase ? 'auth_required' : 'configuration_required', message: err.message });
+      setError({ type: !supabase ? 'configuration_required' : err.message === 'Authentication required' ? 'auth_required' : 'account_unverified', message: err.message });
     } finally {
       setChecked(true);
       setLoading(false);
