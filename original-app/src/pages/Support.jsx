@@ -1,267 +1,159 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { base44 } from '@/api/base44Client';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Send, Loader2, User, MessageCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
+import React, { useCallback, useEffect, useState } from 'react';
+import { requireSupabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
 
+/**
+ * Real support tickets backed by Supabase; does not invoke the Base44 LLM
+ * integration or promise an AI-generated answer that doesn't exist.
+ */
 export default function Support() {
-  const [user, setUser] = useState(null);
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: 'Hello! I\'m Imperialist, your Imperial Casino support assistant. How can I help you today? I can assist with account issues, game rules, bonuses, payments, and more. If needed, I can connect you with a live support agent.',
-      timestamp: new Date()
-    }
-  ]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showLiveSupport, setShowLiveSupport] = useState(false);
-  const messagesEndRef = useRef(null);
+  const { user } = useAuth();
+  const [tickets, setTickets] = useState([]);
+  const [activeId, setActiveId] = useState(null);
+  const [conversation, setConversation] = useState(null);
+  const [subject, setSubject] = useState('');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const u = await base44.auth.me();
-        setUser(u);
-      } catch (e) {
-        // User not logged in
-      }
-    };
-    loadUser();
+  const invoke = useCallback(async (action, fields = {}) => {
+    const { data, error: fnError } = await requireSupabase().functions.invoke('ig-support-v1', {
+      body: { action, ...fields },
+    });
+    if (fnError || data?.error) throw new Error(data?.error || fnError?.message || 'Support request failed');
+    return data;
   }, []);
 
+  const reload = useCallback(async () => {
+    const data = await invoke('mine');
+    setTickets(Array.isArray(data?.tickets) ? data.tickets : []);
+  }, [invoke]);
+
+  const openConversation = useCallback(async (id) => {
+    if (!id) return;
+    const data = await invoke('messages', { ticketId: id });
+    setConversation(data);
+    setActiveId(id);
+  }, [invoke]);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (!user) return;
+    let current = true;
+    invoke('mine')
+      .then(data => { if (current) setTickets(Array.isArray(data?.tickets) ? data.tickets : []); })
+      .catch(err => { if (current) setError(err.message); });
+    return () => { current = false; };
+  }, [user?.id, invoke]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
-
-    const userMessage = {
-      role: 'user',
-      content: input,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setLoading(true);
-
+  async function createTicket(event) {
+    event.preventDefault();
+    if (busy || !subject.trim() || !message.trim()) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
     try {
-      const conversationHistory = messages.map(m => `${m.role === 'user' ? 'User' : 'Imperialist'}: ${m.content}`).join('\n');
-      
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `You are Imperialist, the friendly AI support assistant for Imperial Casino. You help users with:
-- Account issues and settings
-- Game rules and how to play
-- Bonus information and promotions
-- Payment and withdrawal questions
-- Technical issues
-- General casino questions
-
-Be helpful, friendly, and concise. If the issue requires human intervention (payment disputes, account verification, serious technical issues), suggest they request live support.
-
-User: ${user?.full_name || 'Guest'}
-Email: ${user?.email || 'Not logged in'}
-
-Conversation history:
-${conversationHistory}
-
-Current question: ${input}
-
-Respond helpfully:`,
+      const data = await invoke('open', {
+        subject: subject.trim(), body: message.trim(), requestId: crypto.randomUUID(),
       });
-
-      const aiMessage = {
-        role: 'assistant',
-        content: response.data,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => [...prev, aiMessage]);
-
-      // Check if user should be escalated to live support
-      if (response.data.toLowerCase().includes('live support') || response.data.toLowerCase().includes('human agent')) {
-        setTimeout(() => {
-          setShowLiveSupport(true);
-        }, 1000);
-      }
-    } catch (error) {
-      toast.error('Failed to get response. Please try again.');
+      setSubject('');
+      setMessage('');
+      await reload();
+      await openConversation(data.id);
+      setNotice('Support ticket opened. Your message is safely recorded.');
+    } catch (err) {
+      setError(err.message);
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
-  };
+  }
 
-  const requestLiveSupport = () => {
-    setShowLiveSupport(true);
-    toast.success('Live support request submitted! Our team will reach out shortly.');
-  };
+  async function reply(event) {
+    event.preventDefault();
+    if (!activeId || !message.trim() || busy || conversation?.ticket?.status === 'closed') return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      await invoke('post', {
+        ticketId: activeId, body: message.trim(), requestId: crypto.randomUUID(),
+      });
+      setMessage('');
+      await openConversation(activeId);
+      await reload();
+      setNotice('Reply saved.');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
-  return (
-    <div className="min-h-screen bg-[#0A0612] py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-32 h-32 mb-4">
-            <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/697dc67abbb768c5bbbab5d5/7ccbd401d_1766563791186_Firefly_GeminiFlash_BigCitybackgroundskyscrapersurbangraffitiarttrafficmaincharacter-pink323161png3.jpg"
-              alt="Imperialist"
-              className="w-full h-full object-contain drop-shadow-2xl"
-            />
+  return <main className="min-h-screen bg-[#0A0612] text-white px-4 py-10">
+    <div className="mx-auto max-w-5xl">
+      <p className="text-sm tracking-widest uppercase text-pink-400">Imperial Games</p>
+      <h1 className="text-4xl font-black mb-2">Support Center</h1>
+      <p className="text-gray-400 mb-8">Send a message to the Imperial Games support team. No AI service or payment-processing action is connected.</p>
+      {error && <p role="alert" className="mb-5 rounded-lg border border-red-500/40 bg-red-950/40 p-4">{error}</p>}
+      {notice && <p role="status" className="mb-5 rounded-lg border border-green-500/40 bg-green-950/30 p-4">{notice}</p>}
+      <div className="grid gap-5 lg:grid-cols-[300px_1fr]">
+        <aside className="rounded-2xl border border-white/10 bg-[#191329] p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-lg">Your requests</h2>
+            <button type="button" className="text-pink-300 hover:text-pink-200"
+              onClick={() => { setActiveId(null); setConversation(null); setMessage(''); }}>New</button>
           </div>
-          <h1 className="text-4xl font-black text-white mb-2">Support Center</h1>
-          <p className="text-gray-400">Chat with Imperialist, your AI support assistant</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-[#1A1528] to-[#0F0A1E] border border-white/10 rounded-3xl overflow-hidden">
-          {/* Messages */}
-          <div className="h-[600px] overflow-y-auto p-6 space-y-4">
-            <AnimatePresence>
-              {messages.map((message, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="w-12 h-12 flex-shrink-0">
-                      <img 
-                        src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/697dc67abbb768c5bbbab5d5/7ccbd401d_1766563791186_Firefly_GeminiFlash_BigCitybackgroundskyscrapersurbangraffitiarttrafficmaincharacter-pink323161png3.jpg"
-                        alt="Imperialist"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  )}
-                  <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                    message.role === 'user' 
-                      ? 'bg-gradient-to-r from-pink-500 to-pink-600 text-white' 
-                      : 'bg-white/5 text-white border border-white/10'
-                  }`}>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
-                    <span className="text-xs opacity-50 mt-1 block">
-                      {message.timestamp.toLocaleTimeString()}
-                    </span>
-                  </div>
-                  {message.role === 'user' && (
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center flex-shrink-0">
-                      <User className="w-5 h-5 text-white" />
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {loading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex gap-3"
-              >
-                <div className="w-12 h-12">
-                  <img 
-                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/697dc67abbb768c5bbbab5d5/7ccbd401d_1766563791186_Firefly_GeminiFlash_BigCitybackgroundskyscrapersurbangraffitiarttrafficmaincharacter-pink323161png3.jpg"
-                    alt="Imperialist"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="bg-white/5 rounded-2xl px-4 py-3 border border-white/10">
-                  <Loader2 className="w-5 h-5 text-pink-400 animate-spin" />
-                </div>
-              </motion.div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          {/* Live Support Banner */}
-          <AnimatePresence>
-            {showLiveSupport && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="border-t border-white/10 bg-green-500/10 px-6 py-4"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-white font-bold mb-1">Need Human Support?</h3>
-                    <p className="text-sm text-gray-400">Our live support team is here to help!</p>
-                  </div>
-                  <Button
-                    onClick={requestLiveSupport}
-                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700"
-                  >
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Contact Live Support
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Input */}
-          <div className="border-t border-white/10 p-6">
-            <div className="flex gap-3">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                placeholder="Type your question here..."
-                className="flex-1 bg-white/5 border-white/10 text-white resize-none min-h-[60px]"
-                disabled={loading}
-              />
-              <Button
-                onClick={sendMessage}
-                disabled={!input.trim() || loading}
-                className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 h-[60px] px-6"
-              >
-                {loading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Send className="w-5 h-5" />
-                )}
-              </Button>
-            </div>
-            <div className="flex items-center gap-4 mt-4">
-              <button
-                onClick={requestLiveSupport}
-                className="text-sm text-gray-400 hover:text-pink-400 transition-colors"
-              >
-                Skip to Live Support →
+          {tickets.length === 0 && <p className="text-gray-400 text-sm">No support requests yet.</p>}
+          <div className="space-y-3">
+            {tickets.map(ticket =>
+              <button key={ticket.id} type="button" onClick={() => {
+                void openConversation(ticket.id).catch(err => setError(err.message));
+              }} className={'w-full rounded-lg border p-3 text-left ' +
+                (activeId === ticket.id ? 'border-pink-400 bg-pink-500/10' : 'border-white/10 bg-white/5')}>
+                <span className="block font-medium break-words">{ticket.subject}</span>
+                <span className="text-sm text-gray-400 capitalize">{ticket.status?.replace('_', ' ')}</span>
               </button>
-            </div>
+            )}
           </div>
-        </div>
-
-        {/* Quick Help Topics */}
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { title: 'Account Help', question: 'I need help with my account settings' },
-            { title: 'Game Rules', question: 'How do I play the games?' },
-            { title: 'Bonuses', question: 'Tell me about available bonuses' },
-            { title: 'Payments', question: 'I have a question about payments' }
-          ].map((topic, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                setInput(topic.question);
-                setTimeout(() => sendMessage(), 100);
-              }}
-              className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-pink-500/30 transition-all text-white text-sm font-medium"
-            >
-              {topic.title}
-            </button>
-          ))}
-        </div>
+        </aside>
+        <section className="rounded-2xl border border-white/10 bg-[#191329] p-5">
+          {conversation ? <>
+            <div className="flex justify-between gap-3 flex-wrap border-b border-white/10 pb-4 mb-5">
+              <h2 className="text-xl font-bold">{conversation.ticket.subject}</h2>
+              <span className="text-pink-300 capitalize">{conversation.ticket.status.replace('_',' ')}</span>
+            </div>
+            <div aria-label="Support conversation" className="space-y-3 mb-5">
+              {(conversation.messages || []).map(m => <div key={m.id}
+                className={'rounded-lg p-3 ' + (m.sender_kind === 'staff' ? 'bg-indigo-900/50' : 'bg-white/5')}>
+                <span className="block text-xs font-bold text-pink-300 mb-1">{m.sender_kind === 'staff' ? 'Imperial Games support' : 'You'}</span>
+                <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                <time className="text-xs text-gray-400">{new Date(m.created_at).toLocaleString()}</time>
+              </div>)}
+            </div>
+          </> : <h2 className="text-xl font-bold mb-4">Open a new support ticket</h2>}
+          {conversation?.ticket?.status === 'closed'
+            ? <p className="text-amber-300">This conversation is closed. Open a new request for further assistance.</p>
+            : <form onSubmit={conversation ? reply : createTicket} className="space-y-4">
+              {!conversation && <label className="block">Subject
+                <input aria-label="Support subject" required minLength={3} maxLength={120}
+                  value={subject} onChange={e => setSubject(e.target.value)}
+                  className="mt-1 w-full rounded-lg bg-black/30 border border-white/20 p-3" />
+              </label>}
+              <label className="block">{conversation ? 'Your reply' : 'Describe the problem'}
+                <textarea aria-label="Support message" required minLength={1} maxLength={2000}
+                  value={message} onChange={e => setMessage(e.target.value)}
+                  rows={5} className="mt-1 w-full rounded-lg bg-black/30 border border-white/20 p-3"/>
+              </label>
+              <button disabled={busy || !user} type="submit"
+                className="rounded-lg bg-pink-600 hover:bg-pink-500 disabled:opacity-50 px-6 py-3 font-bold">
+                {busy ? 'Saving…' : conversation ? 'Send reply' : 'Open support ticket'}
+              </button>
+            </form>}
+          <p className="text-sm text-gray-400 mt-4">
+            Never send private keys, recovery phrases, or payment card details in support messages.
+          </p>
+        </section>
       </div>
     </div>
-  );
+  </main>;
 }
