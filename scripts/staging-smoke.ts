@@ -20,7 +20,8 @@ try {
     if (reveal.roundId !== commit.id || reveal.clientSeed !== clientSeed || reveal.serverSeedHash !== commit.server_seed_hash || reveal.game !== game) throw new Error("Commit/reveal mismatch");
     if (!await verifyFairRound({ game, serverSeed: reveal.serverSeed, clientSeed, nonce: reveal.nonce, serverSeedHash: commit.server_seed_hash, outcome: reveal.outcome })) throw new Error(`Invalid HMAC result for ${game}`);
     const { data: replay, error: replayError } = await client.functions.invoke("provably-fair-v2", { body: { action: "reveal", roundId: commit.id, clientSeed } });
-    if (replayError || JSON.stringify(replay.outcome) !== JSON.stringify(reveal.outcome)) throw new Error("Idempotent replay failed");
+    if (replayError || !replay || replay.phase !== "revealed" || replay.roundId !== reveal.roundId || replay.clientSeed !== clientSeed || replay.serverSeed !== reveal.serverSeed || replay.serverSeedHash !== reveal.serverSeedHash || replay.nonce !== reveal.nonce || replay.game !== game) throw new Error("Idempotent replay metadata failed: " + (replayError?.message ?? "response mismatch"));
+    if (!await verifyFairRound({ game, serverSeed: replay.serverSeed, clientSeed, nonce: replay.nonce, serverSeedHash: commit.server_seed_hash, outcome: replay.outcome })) throw new Error("Idempotent replay outcome verification failed");
     console.log(`PASS ${game}: commit, reveal, HMAC verification, replay`);
   }
 } finally {
