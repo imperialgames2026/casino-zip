@@ -60,7 +60,9 @@ Deno.serve(async(req)=>{
  const db=createClient(url,secret,{auth:{persistSession:false}});
  try{
   const body=await req.json();const action=body.action;
-  const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
+  const {data:eligibility,error:eligibilityError}=await db.from("profiles").select("is_excluded").eq("id",user.id).maybeSingle();
+ if(eligibilityError || !eligibility || eligibility.is_excluded !== false)return json({error:"Account ineligible for gameplay"},403);
+ const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
   if(roleCheckError)return json({error:"Cannot check account permission"},503);
   if(roleRow?.role==="tester")return json({error:"Read-only tester account"},403);
   if(action==="create"){
