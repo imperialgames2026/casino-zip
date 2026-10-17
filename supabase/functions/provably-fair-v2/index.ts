@@ -1,7 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 const enc = new TextEncoder();
 const hex = (b: Uint8Array) => Array.from(b,x=>x.toString(16).padStart(2,"0")).join("");
-const respond=(v:unknown,status=200)=>new Response(JSON.stringify(v),{status,headers:{"content-type":"application/json","cache-control":"no-store"}});
+const HEADERS={"content-type":"application/json","cache-control":"no-store",
+ "access-control-allow-origin":"*",
+ "access-control-allow-headers":"authorization, apikey, content-type, x-client-info, x-supabase-api-version",
+ "access-control-allow-methods":"POST, OPTIONS"};
+const respond=(v:unknown,status=200)=>new Response(JSON.stringify(v),{status,headers:HEADERS});
 async function outcome(seed:string,client:string,nonce:number,game:string){
  const key=await crypto.subtle.importKey("raw",enc.encode(seed),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
  const numbers:number[]=[];let counter=0;
@@ -12,6 +16,7 @@ async function outcome(seed:string,client:string,nonce:number,game:string){
  return game==="dice"?{dice:numbers,sum:numbers[0]+numbers[1]}:game==="coin"?{coin:numbers[0]%2?"heads":"tails"}:{number:numbers[0]};
 }
 Deno.serve(async(req)=>{
+ if(req.method==="OPTIONS")return new Response(null,{status:204,headers:HEADERS});
  if(req.method!=="POST")return respond({error:"POST required"},405);
  const token=req.headers.get("authorization")?.replace(/^Bearer /i,"");
  if(!token)return respond({error:"Authentication required"},401);
