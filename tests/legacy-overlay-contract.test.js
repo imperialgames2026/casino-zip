@@ -21,6 +21,10 @@ describe('preserved casino migration adapter', () => {
   it('blocks old gameplay and account-sensitive routes', () => {
     const code = read('patch-app.mjs');
     expect(code).toContain("setStatus('unverified')");
-    expect(code).toContain('Withdraw|KYCVerification');
+    expect(code).toContain('const approvedRoutes = new Set([');
+    expect(code).toContain("'/TransactionHistory'");
+    expect(code).toContain('!approvedRoutes.has(currentRoute)');
+    expect(code).not.toContain("'/Withdraw'");
+    expect(code).not.toContain("'/KYCVerification'");
   });
 });
