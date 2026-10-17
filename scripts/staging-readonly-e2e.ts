@@ -2,9 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_ANON_KEY;
-const email = process.env.STAGING_TEST_EMAIL;
-const password = process.env.STAGING_TEST_PASSWORD;
-if (!url || !key || !email || !password) throw new Error('Configure staging test credentials in GitHub Actions secrets');
+const email = process.env.STAGING_READONLY_TEST_EMAIL;
+const password = process.env.STAGING_READONLY_TEST_PASSWORD;
+if (!url || !key || !email || !password) throw new Error('Configure isolated staging read-only Tester credentials in GitHub Actions secrets');
 
 const client = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 const { data: auth, error: loginError } = await client.auth.signInWithPassword({ email, password });
