@@ -16,6 +16,7 @@ Deno.serve(async(req)=>{
  if(eligibilityError || !eligibility || eligibility.is_excluded !== false)return reply({error:"Account ineligible for gameplay"},403);
  const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
  if(roleCheckError)return reply({error:"Cannot check account permission"},503);
+ if(!roleRow || !["player","admin","superadmin","tester"].includes(roleRow.role))return reply({error:"Account role not authorized"},403);
  if(roleRow?.role==="tester" && !["list","tables"].includes(input.action))return reply({error:"Read-only tester account"},403);
  if(input.action==="list"){
   const {data:events,error}=await db.from("poker_events_v1").select("id,name,format,status,config,version,current_level,level_started_at").in("status",["registration","running","paused","finished"]).order("created_at",{ascending:false}).limit(50);
