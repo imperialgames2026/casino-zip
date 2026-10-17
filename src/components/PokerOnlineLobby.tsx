@@ -3,7 +3,7 @@ import {supabase} from "../lib/supabase";
 type EventRow={id:string;name:string;format:string;status:string;registered:number;maxPlayers:number;version:number;myEntry:{table_id:string|null;seat_no:number|null}|null;startAt?:string};
 type Card={rank:number;suit:"c"|"d"|"h"|"s"};
 type Seat={seat_no:number;user_id:string;stack:number;committed:number;street_bet:number;folded:boolean;all_in:boolean;acted:boolean};
-type TableSnapshot={table:{id:string;status:string;version:number;street:string;button:number;turnIndex:number|null;board:Card[];currentBet:number;minRaise:number;smallBlind:number;bigBlind:number;deckCommitment:string;handNo:number};seats:Seat[];holeCards:Card[];revealedSeed?:string;verificationHandId?:string};
+type TableSnapshot={table:{id:string;status:string;version:number;street:string;button:number;turnIndex:number|null;board:Card[];currentBet:number;minRaise:number;smallBlind:number;bigBlind:number;deckCommitment:string;handNo:number;ownerId:string;eventId:string|null};seats:Seat[];holeCards:Card[];revealedSeed?:string;verificationHandId?:string};
 const showCards=(cards:Card[])=>cards.map(c=>(c.rank===14?"A":c.rank===13?"K":c.rank===12?"Q":c.rank===11?"J":String(c.rank))+({c:"♣",d:"♦",h:"♥",s:"♠"}[c.suit])).join(" ");
 async function invoke(name:string,body:Record<string,unknown>){
  if(!supabase)throw Error("Supabase is not configured");
@@ -70,7 +70,7 @@ export default function PokerOnlineLobby({userId}:{userId:string|null}){
     {snapshot.seats.map(s=><tr key={s.seat_no}><td>{s.seat_no}</td><td>{s.user_id===userId?"You":s.user_id.slice(0,8)}</td><td>{s.stack}</td><td>{s.committed}</td><td>{s.folded?"Folded":s.all_in?"All in":s.acted?"Acted":"Waiting"}</td></tr>)}
    </tbody></table>
    <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:12}}>
-    {(["waiting","complete"].includes(snapshot.table.status))&&<button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"start",tableId}))}>Deal next hand (table owner)</button>}
+    {(["waiting","complete"].includes(snapshot.table.status))&&snapshot.table.ownerId===userId&&<button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"start",tableId}))}>Deal next hand (table owner)</button>}
     {isMyTurn&&<><button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"act",tableId,version:snapshot.table.version,actionId:crypto.randomUUID(),move:toCall?"call":"check"}))}>{toCall?"Call "+toCall:"Check"}</button>
     <button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"act",tableId,version:snapshot.table.version,actionId:crypto.randomUUID(),move:"fold"}))}>Fold</button>
     <button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"act",tableId,version:snapshot.table.version,actionId:crypto.randomUUID(),move:"allin"}))}>All in</button>
@@ -78,6 +78,8 @@ export default function PokerOnlineLobby({userId}:{userId:string|null}){
     <button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"act",tableId,version:snapshot.table.version,actionId:crypto.randomUUID(),move:snapshot.table.currentBet?"raise":"bet",amount:raiseTo}))}>Bet / Raise</button></>}
     {snapshot.table.status==="showdown"&&snapshot.table.street!=="river"&&<button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"advance",tableId}))}>Deal next street</button>}
     {snapshot.table.status==="showdown"&&snapshot.table.street==="river"&&<button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"settle",tableId}))}>Settle showdown</button>}
+    {snapshot.table.status==="complete"&&snapshot.table.eventId&&<button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"sync",tableId}))}>Process eliminations / balance seats</button>}
+    {snapshot.table.eventId&&<button disabled={busy} onClick={()=>void run(()=>invoke("poker-table-v1",{action:"level",tableId}))}>Check blind level</button>}
     <button onClick={()=>void loadTable(tableId)} disabled={busy}>Reconnect / refresh snapshot</button>
     <button onClick={()=>{setTableId("");setSnapshot(null);}}>Leave view (keep seat)</button>
    </div>
