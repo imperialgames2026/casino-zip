@@ -37,8 +37,13 @@ replace(
   if (user?.is_excluded) return <ExclusionBanner />;
   // Server-side functions also deny gameplay mutations. The migration preview
   // must not expose old client-authoritative wagering or identity collection.
-  const withheld = /^\\/(?:Play|Blackjack|Poker|Store|Withdraw|KYCVerification|Staking|CryptoWallet|OwnerKeyring|Admin|PrizeClaims|Game)/i;
-  if (withheld.test(window.location.pathname)) return <main role="alert" style={{padding:32}}>
+  const approvedRoutes = new Set([
+    '/', '/Home', '/Profile', '/TransactionHistory', '/PrivacyPolicy',
+    '/TermsOfService', '/CookiesPolicy', '/ResponsiblePlay',
+    '/FairnessManifesto', '/Licensing',
+  ]);
+  const currentRoute = window.location.pathname.replace(/\\/+$/, '') || '/';
+  if (!approvedRoutes.has(currentRoute)) return <main role="alert" style={{padding:32}}>
     <h1>Imperial Games migration preview</h1>
     <p>This page is disabled until its operations have been migrated and verified in Supabase.</p>
   </main>;
