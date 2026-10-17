@@ -78,3 +78,13 @@ Do not merge into `main` or activate real-value play without a clean CI and live
 - **Operating control:** To suspend the job if required, use the Supabase SQL editor to run `SELECT cron.unschedule('imperial-poker-turn-timeouts');`. Do not disable deadlines in the database.
 
 **Remaining gate:** The full React app build and signed-in two-browser E2E are unverified. Do not call paid IGD extensions production-ready until permissions, account eligibility, refunds/disputes and real-value wallet behavior pass review.
+
+## Planned IGN Solana token: market-priced (not deployed)
+
+IGN is a **future, market-priced Solana token**, distinct from the legacy IGT balance. It has not been minted; no mint address, pool, valid market feed, token decimal precision or liquid market is yet established. IGN purchases remain **disabled** until these requirements are independently verified.
+
+For Poker's +30-second timebank, the base price stays at **0.15 IGD**. Its market-value equivalent in IGN must be quoted using an explicitly validated IGD/USD valuation and an independent, fresh IGN/USD market price. The quote must include signed timestamp, source(s), slot/observation details where available, spread/slippage constraints, token decimals and a short expiry; reject stale or manipulated/illiquid prices and unavailable oracles. Never equate IGN with IGT.
+
+Before enabling an IGN timebank purchase: verify Solana mint and accepted token program; verify the actual SPL token transfer and finality; bind transfer, wallet ownership, quoted price, purpose, table/turn and unique idempotency key; settle the charge and deadline extension together or compensate on-chain transfers safely if off-chain state fails. Ensure one extension per turn across races and reconnects. A client-provided price or transaction hash alone must never authorize an extension.
+
+No market-priced token payment feature should be activated without compliance review, pricing/oracle tests, replay-attack protection and a complete chain-to-ledger reconciliation.
