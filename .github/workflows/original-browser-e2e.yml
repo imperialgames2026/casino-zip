@@ -8,6 +8,9 @@ permissions:
   contents: read
 jobs:
   browser-e2e:
+    concurrency:
+      group: imperial-staging-auth-session
+      cancel-in-progress: false
     if: github.ref == 'refs/heads/integration/app-scaffold-audit'
     runs-on: ubuntu-latest
     environment: staging
