@@ -27,6 +27,22 @@ Deno.serve(async(req)=>{
  const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
  if(roleCheckError)return respond({error:"Cannot check account permission"},503);
  if(!roleRow || !["player","admin","superadmin","tester"].includes(roleRow.role))return respond({error:"Account role not authorized"},403);
+ if(input.action==="history"){
+  if(Object.keys(input).length!==1)return respond({error:"Invalid history request"},400);
+  // Never expose seeds until a round has already been revealed.
+  const {data,error}=await db.from("fair_seed_commitments")
+    .select("id,game,server_seed,server_seed_hash,client_seed,nonce,outcome,created_at,revealed_at")
+    .eq("user_id",user.id).eq("status","revealed")
+    .order("revealed_at",{ascending:false}).limit(50);
+  if(error)return respond({error:"Round history unavailable"},503);
+  return respond({practiceOnly:true,algorithm:"hmac-sha256-v2",
+    rounds:(data??[]).map(r=>({
+      id:r.id,game:r.game,serverSeed:r.server_seed,serverSeedHash:r.server_seed_hash,
+      clientSeed:r.client_seed,nonce:r.nonce,outcome:r.outcome,
+      createdAt:r.created_at,revealedAt:r.revealed_at,
+    })),
+  });
+ }
  if(roleRow?.role==="tester")return respond({error:"Read-only tester account"},403);
  if(input.action==="commit"){
   if(!["dice","coin","number"].includes(String(input.game)))return respond({error:"Invalid game"},400);
