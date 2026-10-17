@@ -27,7 +27,7 @@ export default function Profile() {
     { name: 'IGD', amount: wallet?.igd_balance },
     { name: 'IGT', amount: wallet?.igt_balance },
   ];
-  const nicknameIsUnset = !user?.display_name;
+  const nicknameIsUnset = !user?.display_name && user?.role !== 'tester';
 
   async function setOneTimeNickname(event) {
     event.preventDefault();
