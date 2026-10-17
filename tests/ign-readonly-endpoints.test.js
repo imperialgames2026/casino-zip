@@ -18,6 +18,7 @@ describe("staging Edge source must prevent tester-triggered mutations", () => {
       expect(eligibility).toBeGreaterThan(-1);
       expect(eligibility).toBeLessThan(roleLookup);
       expect(source).toContain('error:"Account ineligible for gameplay"');
+      expect(source).toContain('error:"Account role not authorized"');
       expect(roleLookup).toBeGreaterThan(-1);
       expect(guard).toBeGreaterThan(roleLookup);
       expect(mutation).toBeGreaterThan(guard);
