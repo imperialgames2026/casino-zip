@@ -75,6 +75,10 @@ Deno.serve(async(req)=>{
   const {data:table,error:tableError}=await db.from("poker_tables_v1").select("*").eq("id",tableId).single();
   if(tableError||!table)return json({error:"Table unavailable"},404);
   if(action==="start"){
+   if(table.event_id){
+    const {error:clockError}=await db.rpc("poker_event_tick_v1",{p_event:table.event_id});
+    if(clockError)throw clockError;
+   }
    if(table.owner_id!==user.id)return json({error:"Only table owner may start"},403);
    const seed=crypto.randomUUID()+crypto.randomUUID(),handNo=Number(table.hand_no)+1;
    const {deck,commitment}=await committedDeck(seed,tableId+":"+handNo);
@@ -98,6 +102,18 @@ Deno.serve(async(req)=>{
    const payout=awards(seats,table.board,table.button);
    const {data,error}=await db.rpc("poker_settle_v1",{p_table:tableId,p_version:table.version,p_awards:payout});if(error)throw error;
    return json({result:data,awards:payout});
+  }
+  if(action==="sync"){
+   if(!table.event_id)return json({error:"Not a tournament table"},409);
+   const {data,error}=await db.rpc("poker_event_sync_v1",{p_event:table.event_id});
+   if(error)throw error;
+   return json(data);
+  }
+  if(action==="level"){
+   if(!table.event_id)return json({error:"Not a tournament table"},409);
+   const {data,error}=await db.rpc("poker_event_tick_v1",{p_event:table.event_id});
+   if(error)throw error;
+   return json(data);
   }
   if(action==="snapshot"){
    const {data:seats,error:seatsError}=await db.from("poker_seats_v1").select("seat_no,user_id,stack,committed,street_bet,folded,all_in,acted").eq("table_id",tableId).order("seat_no");
