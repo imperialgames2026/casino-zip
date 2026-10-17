@@ -23,6 +23,8 @@ export default function App() {
   const [guess, setGuess] = useState("heads");
   const [result, setResult] = useState("");
   const [rounds, setRounds] = useState(0);
+  const [fairProof, setFairProof] = useState("");
+  const [fairBusy, setFairBusy] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
@@ -63,6 +65,26 @@ export default function App() {
     setRounds(value => value + 1);
   }
 
+  async function playServerRound() {
+    if (!activeGame || !session || fairBusy) return;
+    setFairBusy(true); setResult(""); setFairProof("");
+    try {
+      const clientSeed = crypto.randomUUID();
+      const { data: committed, error: commitError } = await supabase.functions.invoke("provably-fair-demo", { body: { action: "commit", game: activeGame, clientSeed } });
+      if (commitError || !committed?.id) throw commitError ?? new Error("Commit failed");
+      setFairProof("Committed hash: " + committed.server_seed_hash);
+      const { data: revealed, error: revealError } = await supabase.functions.invoke("provably-fair-demo", { body: { action: "reveal", roundId: committed.id } });
+      if (revealError || !revealed?.serverSeed) throw revealError ?? new Error("Reveal failed");
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(revealed.serverSeed));
+      const calculatedHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
+      if (calculatedHash !== committed.server_seed_hash) throw new Error("Server seed hash verification failed");
+      setFairProof("Verified SHA-256 commitment: " + calculatedHash + " | Round: " + revealed.roundId + " | Client seed: " + revealed.clientSeed + " | Server seed: " + revealed.serverSeed);
+      setResult("Server result: " + JSON.stringify(revealed.outcome));
+      setRounds(v => v + 1);
+    } catch (error) { setResult(error instanceof Error ? error.message : "Unable to play server round"); }
+    finally { setFairBusy(false); }
+  }
+
   const buttonStyle = { padding: "12px 18px", borderRadius: 10, border: "1px solid #b7954c", background: "#b7954c", color: "#111827", cursor: "pointer", fontWeight: 700 } as const;
   const panelStyle = { background: "#19243b", border: "1px solid #34415a", borderRadius: 16, padding: 24 } as const;
   const inputStyle = { padding: 12, borderRadius: 8, border: "1px solid #62708a", background: "#101a2e", color: "white", width: "100%", boxSizing: "border-box" } as const;
@@ -89,7 +111,7 @@ export default function App() {
         {activeGame && <section style={{ ...panelStyle, marginTop: 24 }} aria-label="Selected game"><h2>{games.find(g => g.type === activeGame)?.name}</h2>
           {activeGame === "coin" && <label>Prediction <select style={inputStyle} value={guess} onChange={e => setGuess(e.target.value)}><option value="heads">Heads</option><option value="tails">Tails</option></select></label>}
           {activeGame === "number" && <label>Pick a number <select style={inputStyle} value={guess} onChange={e => setGuess(e.target.value)}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}</select></label>}
-          <p><button style={buttonStyle} onClick={play}>Play round</button></p><p aria-live="polite">{result}</p>
+          <p><button style={buttonStyle} onClick={play}>Local demo round</button> {session && <button style={buttonStyle} disabled={fairBusy} onClick={playServerRound}>{fairBusy ? "Calling server…" : "Play provably fair server round"}</button>}</p><p aria-live="polite">{result}</p>{fairProof && <p style={{ overflowWrap: "anywhere", fontSize: 12 }} aria-live="polite">{fairProof}</p>}{!session && <p>Sign in under Account to play verified server rounds.</p>}
         </section>}
       </section>}
       {page === "Wallet" && <section><h1>Wallet</h1><div style={panelStyle}><h2>Financial transactions unavailable</h2><p>This demo does not issue tokens, store a financial balance, accept deposits, process withdrawals, or provide payouts.</p><p>Secure ledger and payment workflows must be independently implemented and tested before activation.</p></div></section>}
