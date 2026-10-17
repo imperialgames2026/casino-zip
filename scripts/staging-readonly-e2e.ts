@@ -60,6 +60,23 @@ try {
   }
   console.log('PASS authenticated pseudonymous practice leaderboard');
 
+  // Crypto-deposit work is an explicitly disabled capability catalog; never
+  // request a receiving address or initiate payments in read-only CI.
+  const catalog = await call('crypto-deposit-preview-v1', { action: 'catalog' }, 200);
+  if (catalog.acceptsDeposits !== false || catalog.networks?.length !== 12 ||
+      catalog.assets?.length !== 24 ||
+      !catalog.networks.every((n: { available: boolean }) => n.available === false) ||
+      !catalog.assets.every((a: { available: boolean; verified: boolean }) =>
+        a.available === false && a.verified === false)) {
+    throw new Error('Crypto capability catalog unexpectedly enabled or incomplete');
+  }
+  const observations = await call('crypto-deposit-preview-v1', { action: 'observations' }, 200);
+  if (observations.acceptsDeposits !== false || !Array.isArray(observations.observations) ||
+      observations.observations.some((o: { credit_status: string }) => o.credit_status !== 'not_credited')) {
+    throw new Error('Crypto observations unexpectedly credited or unavailable');
+  }
+  console.log('PASS disabled 12-network crypto catalog and uncredited own observations');
+
   for (const [name, body] of [
     ['poker-events-v1', { action: 'register', eventId: crypto.randomUUID() }],
     ['poker-table-v1', { action: 'create' }],
