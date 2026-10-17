@@ -49,6 +49,9 @@ try {
   const pokerLink = testerPage.getByRole('link', { name: 'Poker', exact: true });
   if (await pokerLink.count()) {
     await pokerLink.first().click();
+    await testerPage.waitForTimeout(1200);
+    console.log('DEBUG route after Poker link:', new URL(testerPage.url()).pathname);
+    console.log('DEBUG route guard:', JSON.stringify(await testerPage.locator('main[role="alert"]').allTextContents()));
     await testerPage.getByText('This page is disabled until its operations have been migrated').waitFor({ timeout: 15000 });
     console.log('PASS browser React Router blocks old poker route after client navigation');
   }
