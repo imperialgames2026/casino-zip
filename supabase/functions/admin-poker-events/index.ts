@@ -19,14 +19,20 @@ Deno.serve(async(req)=>{
   const {data,error}=await admin.from("poker_events_v1").select("id,name,format,status,config,version,created_at").order("created_at",{ascending:false}).limit(100);
   return error?respond({error:"Unable to load drafts"},500):respond({events:data});
  }
+ if(input.action==="publish"||input.action==="start"){
+  if(typeof input.eventId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.eventId)||!Number.isSafeInteger(input.version)||input.version<0||typeof input.requestId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.requestId))return respond({error:"Invalid event or version"},400);
+  const method=input.action==="publish"?"poker_event_publish_v1":"poker_event_start_v1";
+  const {data,error}=await admin.rpc(method,{p_event:input.eventId,p_actor:user.id,p_version:input.version,p_request:input.requestId});
+  return error?respond({error:error.message},409):respond(data);
+ }
  if(input.action!=="create")return respond({error:"Unknown action"},400);
  const name=input.name,format=input.format,config=input.config,requestId=input.requestId;
  if(typeof name!=="string"||name.trim().length<3||name.length>90||!["scheduled_mtt","sit_and_go","ring"].includes(format)||typeof config!=="object"||!config||Array.isArray(config)||typeof requestId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestId))
   return respond({error:"Invalid configuration"},400);
  const {maxPlayers,seatsPerTable,startingStack,smallBlind,bigBlind,levels,startAt,buyInMin,buyInMax}=config;
- if(!integer(maxPlayers,2,10000)||!integer(seatsPerTable,2,10)||maxPlayers<seatsPerTable&&format==="scheduled_mtt"||!integer(startingStack,100,1000000)||!integer(smallBlind,1,100000)||!integer(bigBlind,2,200000)||bigBlind<smallBlind*2)
+ if(!integer(maxPlayers,2,10000)||!integer(seatsPerTable,2,6)||maxPlayers<seatsPerTable&&format==="scheduled_mtt"||!integer(startingStack,100,1000000)||!integer(smallBlind,1,100000)||!integer(bigBlind,2,200000)||bigBlind<smallBlind*2)
   return respond({error:"Invalid seats, chips or blinds"},400);
- if(format==="sit_and_go"&&(maxPlayers!==seatsPerTable||maxPlayers>10))return respond({error:"Single-table Sit & Go must fill a single table"},400);
+ if(format==="sit_and_go"&&(maxPlayers!==seatsPerTable||maxPlayers>6))return respond({error:"Single-table Sit & Go must fill a single table"},400);
  if(format==="ring"&&(maxPlayers>6||!integer(buyInMin,bigBlind*20,1000000)||!integer(buyInMax,buyInMin,1000000)))return respond({error:"Invalid ring buy-in limits"},400);
  if(format==="scheduled_mtt"&&(typeof startAt!=="string"||!Number.isFinite(Date.parse(startAt))||Date.parse(startAt)<=Date.now()))return respond({error:"Scheduled start must be in the future"},400);
  if(!Array.isArray(levels)||levels.length<1||levels.length>100||!levels.every((l:any,i:number)=>l&&l.level===i+1&&integer(l.smallBlind,1,100000000)&&integer(l.bigBlind,2,200000000)&&l.bigBlind>=2*l.smallBlind&&integer(l.ante,0,100000000)&&integer(l.durationSeconds,60,7200)))
