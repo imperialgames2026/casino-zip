@@ -22,6 +22,8 @@ type GameType = typeof games[number]["type"];
 export default function App() {
   const [page, setPage] = useState<Page>("Lobby");
   const [session, setSession] = useState<Session | null>(null);
+  const [accountRole, setAccountRole] = useState<string | null>(null);
+  const [roleLoading, setRoleLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authMode, setAuthMode] = useState<"signin" | "signup" | "reset">("signin");
@@ -43,6 +45,25 @@ export default function App() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next));
     return () => { mounted = false; listener.subscription.unsubscribe(); };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!session?.user.id) {
+      setAccountRole(null);
+      setRoleLoading(false);
+      return;
+    }
+    setAccountRole(null);
+    setRoleLoading(true);
+    void supabase.from("user_roles").select("role")
+      .eq("user_id", session.user.id).maybeSingle()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setAccountRole(error ? null : (data?.role ?? "player"));
+        setRoleLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [session?.user.id]);
 
   async function authenticate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -103,7 +124,7 @@ export default function App() {
     <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "20px max(24px, 6vw)", borderBottom: "1px solid #34415a" }}>
       <strong style={{ fontSize: 25, color: "#e4c47d" }}>♛ Imperial Games</strong>
       <nav aria-label="Main navigation" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {(["Lobby", "Games", "Wallet", "Account", "Admin"] as const).map(item => <button key={item} onClick={() => { setPage(item); setActiveGame(null); setNotice(""); }} aria-current={page === item ? "page" : undefined} style={{ ...buttonStyle, background: page === item ? "#b7954c" : "#19243b", color: page === item ? "#111827" : "#f7f3e8" }}>{item}</button>)}
+        {(["Lobby", "Games", "Wallet", "Account", "Admin"] as const).filter(item => item !== "Admin" || (!roleLoading && ["admin", "superadmin"].includes(accountRole ?? ""))).map(item => <button key={item} onClick={() => { setPage(item); setActiveGame(null); setNotice(""); }} aria-current={page === item ? "page" : undefined} style={{ ...buttonStyle, background: page === item ? "#b7954c" : "#19243b", color: page === item ? "#111827" : "#f7f3e8" }}>{item}</button>)}
       </nav>
     </header>
     <main style={{ maxWidth: 1100, margin: "auto", padding: "48px 24px" }}>
@@ -118,15 +139,15 @@ export default function App() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
           {games.map(game => <article key={game.type} style={panelStyle}><div style={{ fontSize: 48 }}>{game.icon}</div><h2>{game.name}</h2><p>{game.description}</p><button style={buttonStyle} onClick={() => { setActiveGame(game.type); setGuess(game.type === "number" ? "1" : "heads"); setResult(""); }}>Play demo</button></article>)}
         </div>
-        <PokerOnlineLobby userId={session?.user.id??null} />
+        <PokerOnlineLobby userId={session?.user.id??null} readOnly={roleLoading || accountRole === "tester"} />
         <TableGamesPreview />
         {activeGame && <section style={{ ...panelStyle, marginTop: 24 }} aria-label="Selected game"><h2>{games.find(g => g.type === activeGame)?.name}</h2>
           {activeGame === "coin" && <label>Prediction <select style={inputStyle} value={guess} onChange={e => setGuess(e.target.value)}><option value="heads">Heads</option><option value="tails">Tails</option></select></label>}
           {activeGame === "number" && <label>Pick a number <select style={inputStyle} value={guess} onChange={e => setGuess(e.target.value)}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}</select></label>}
-          <p><button style={buttonStyle} onClick={play}>Local demo round</button> {session && <button style={buttonStyle} disabled={fairBusy} onClick={playServerRound}>{fairBusy ? "Calling server…" : "Play provably fair server round"}</button>}</p><p aria-live="polite">{result}</p>{fairProof && <p style={{ overflowWrap: "anywhere", fontSize: 12 }} aria-live="polite">{fairProof}</p>}{!session && <p>Sign in under Account to play verified server rounds.</p>}
+          <p><button style={buttonStyle} onClick={play}>Local demo round</button> {session && !roleLoading && accountRole !== "tester" && <button style={buttonStyle} disabled={fairBusy} onClick={playServerRound}>{fairBusy ? "Calling server…" : "Play provably fair server round"}</button>}</p><p aria-live="polite">{result}</p>{fairProof && <p style={{ overflowWrap: "anywhere", fontSize: 12 }} aria-live="polite">{fairProof}</p>}{!session && <p>Sign in under Account to play verified server rounds.</p>}
         </section>}
       </section>}
-      {page === "Admin" && <section><h1>Crash / Treball round administration</h1><div style={panelStyle}>
+      {page === "Admin" && !roleLoading && ["admin", "superadmin"].includes(accountRole ?? "") && <section><h1>Crash / Treball round administration</h1><div style={panelStyle}>
         <p>Generate a private 150-round batch on the server. Restricted to Admin and Superadmin; server validates authorization. This does not activate wagering or cash-out settlement.</p>
         <button style={buttonStyle} disabled={!session || adminBusy || !supabase} onClick={async () => {
           if (!supabase) return;
@@ -142,8 +163,8 @@ export default function App() {
         {!session && <p>Sign in to request generation. Only authorized admins can generate rounds.</p>}
         {adminResult && <p role="status" aria-live="polite">{adminResult}</p>}
       </div></section>}
-      {page === "Admin" && session && <PokerTournamentBuilder />}
-      {page === "Admin" && session && <IGNTreasuryPanel key={session.user.id} userId={session.user.id} />}
+      {page === "Admin" && session && accountRole === "superadmin" && <PokerTournamentBuilder />}
+      {page === "Admin" && session && accountRole === "superadmin" && <IGNTreasuryPanel key={session.user.id} userId={session.user.id} />}
       {page === "Wallet" && <section><h1>Wallet</h1><IGNWalletPanel /><div style={{ ...panelStyle, marginTop: 22 }}><h2>Practice funds are separate</h2><p>IGN is a public Solana Devnet token displayed in read-only mode. The application does not custody your IGN, accept token deposits, issue rewards, process withdrawals, or settle game outcomes with tokens.</p><p>IGD, IGT, GC/SC, and practice chips are separate currencies or accounting concepts. No real-value transactions are enabled.</p></div></section>}
       {page === "Account" && <section><h1>Account</h1><div style={{ ...panelStyle, maxWidth: 520 }}>
         {session ? <><p>Signed in as <strong>{session.user.email ?? session.user.id}</strong></p><button style={buttonStyle} onClick={async () => { const { error } = await supabase!.auth.signOut(); setNotice(error?.message ?? "Signed out."); }}>Sign out</button><ProfileNameOnce key={`name-${session.user.id}`} userId={session.user.id}/><KYCVerificationPanel key={`kyc-${session.user.id}`} userId={session.user.id}/></> :
