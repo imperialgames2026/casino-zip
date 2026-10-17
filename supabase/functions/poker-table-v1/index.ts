@@ -119,7 +119,7 @@ Deno.serve(async(req)=>{
    const {data:seats,error:seatsError}=await db.from("poker_seats_v1").select("seat_no,user_id,stack,committed,street_bet,folded,all_in,acted").eq("table_id",tableId).order("seat_no");
    if(seatsError)throw seatsError;
    const {data:hole}=await db.from("poker_seats_v1").select("private_hole").eq("table_id",tableId).eq("user_id",user.id).single();
-   const publicTable={id:table.id,status:table.status,version:table.version,button:table.button,turnIndex:table.turn_index,street:table.street,board:table.board,smallBlind:table.small_blind,bigBlind:table.big_blind,currentBet:table.current_bet,minRaise:table.min_raise,deckCommitment:table.deck_commitment,handNo:table.hand_no,eventId:table.event_id};
+   const publicTable={id:table.id,status:table.status,version:table.version,button:table.button,turnIndex:table.turn_index,street:table.street,board:table.board,smallBlind:table.small_blind,bigBlind:table.big_blind,currentBet:table.current_bet,minRaise:table.min_raise,deckCommitment:table.deck_commitment,handNo:table.hand_no,eventId:table.event_id,ownerId:table.owner_id};
    return json({table:publicTable,seats,holeCards:hole?.private_hole??[], ...(table.status==="complete"?{revealedSeed:table.seed_secret,verificationHandId:tableId+":"+table.hand_no}: {})});
   }
   return json({error:"Unsupported action"},400);
