@@ -20,6 +20,14 @@ replace(
   "if (status === 'excluded') return <ExclusionBanner />;\n  if (status !== 'ok') return <div role=\"alert\">Unable to verify account eligibility. Gameplay is unavailable.</div>;"
 );
 replace(
+  "import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';",
+  "import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';"
+);
+replace(
+  "const AuthenticatedApp = () => {",
+  "const AuthenticatedApp = () => {\\n  // React Router updates this hook on every client-side navigation.\\n  const routeLocation = useLocation();"
+);
+replace(
   "const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();",
   "const { isLoadingAuth, isLoadingPublicSettings, authError, isAuthenticated, user } = useAuth();"
 );
@@ -42,7 +50,7 @@ replace(
     '/TermsOfService', '/CookiesPolicy', '/ResponsiblePlay',
     '/FairnessManifesto', '/Licensing', '/DepositNetworks',
   ]);
-  const currentRoute = window.location.pathname.replace(/\\/+$/, '') || '/';
+  const currentRoute = routeLocation.pathname.replace(/\\/+$/, '') || '/';
   if (currentRoute === '/DepositNetworks') return <CryptoDepositNetworksPreview />;
   if (!approvedRoutes.has(currentRoute)) return <main role="alert" style={{padding:32}}>
     <h1>Imperial Games migration preview</h1>
