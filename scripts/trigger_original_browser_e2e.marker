@@ -7,3 +7,5 @@ Browser diagnostic rerun 3.
 Browser JS console diagnostic pass 4.
 
 Browser E2E rerun after disabling unsafe legacy chat/live-bet subscriptions and fixing browser Edge CORS.
+
+Browser E2E rerun: staging Profile and Transaction History using canonical Supabase account records.
