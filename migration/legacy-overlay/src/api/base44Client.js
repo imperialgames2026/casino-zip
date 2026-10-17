@@ -2,7 +2,7 @@
 // Every unsupported legacy operation is denied until replaced and tested.
 import { requireSupabase } from '@/lib/supabaseClient';
 import { currentIdentity } from '@/lib/supabaseIdentity';
-import { readOwnWallet, readOwnTransactions, unsupportedLegacyOperation as deny } from '@/lib/supabaseLegacyReads';
+import { readOwnWallet, readOwnTransactions, readApprovedPracticeGames, unsupportedLegacyOperation as deny } from '@/lib/supabaseLegacyReads';
 
 const blocked = name => new Proxy({}, {
   get: (_obj, method) => {
@@ -33,6 +33,13 @@ export const base44 = {
   entities: new Proxy({}, {
     get: (_obj, name) => {
       if (typeof name === 'symbol') return undefined;
+      if (name === 'Game') return {
+        filter: readApprovedPracticeGames,
+        list: async () => deny('Unscoped legacy game list'),
+        create: async () => deny('Create game'),
+        update: async () => deny('Update game'),
+        delete: async () => deny('Delete game'),
+      };
       if (name === 'UserWallet') return {
         filter: readOwnWallet, list: async () => deny('Wallet list'), get: async () => deny('Wallet lookup'),
         create: async () => deny('Wallet create'), update: async () => deny('Wallet update'),
