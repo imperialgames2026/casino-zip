@@ -11,6 +11,11 @@ on:
         type: boolean
         required: false
         default: false
+      run_readonly_auth_e2e:
+        description: 'Run authenticated read-only tester access checks; no game writes'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -79,6 +84,27 @@ jobs:
       - name: Compile preserved casino with Supabase adapter
         working-directory: ${{ runner.temp }}/imperial-migrated
         run: npm run build
+
+
+
+  readonly-auth-e2e:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_readonly_auth_e2e == true }}
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Authenticated tester access and denial checks
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          STAGING_TEST_EMAIL: ${{ secrets.STAGING_TEST_EMAIL }}
+          STAGING_TEST_PASSWORD: ${{ secrets.STAGING_TEST_PASSWORD }}
+        run: npx --yes tsx scripts/staging-readonly-e2e.ts
 
 
   staging-smoke:
