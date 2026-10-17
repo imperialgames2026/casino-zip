@@ -60,7 +60,7 @@ export function streetComplete(t:Table):boolean{
 }
 export function nextStreet(t:Table,firstActor:number):Table{
  if(!streetComplete(t))throw Error("Street not complete");
- const next={preflop:"flop",flop:"turn",turn:"river",river:null}[t.street];
+ const next=({preflop:"flop",flop:"turn",turn:"river",river:null} as const)[t.street];
  if(!next)throw Error("Showdown required");
  if(!Number.isInteger(firstActor)||firstActor<0||firstActor>=t.seats.length)throw Error("Invalid actor");
  const seats=t.seats.map(s=>({...s,streetBet:0,acted:false}));
