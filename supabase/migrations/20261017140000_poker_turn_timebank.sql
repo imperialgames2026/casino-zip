@@ -59,39 +59,104 @@ BEGIN
   EXECUTE definition;
 END $$;
 
-DO $$
-DECLARE definition text;original text;
+CREATE OR REPLACE FUNCTION public.poker_action_v3(
+ p_table uuid,p_actor uuid,p_action_id uuid,p_version bigint,
+ p_action text,p_amount bigint DEFAULT 0,p_system_timeout boolean DEFAULT false
+) RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path='' AS $$
+DECLARE
+ t public.poker_tables_v1%rowtype;
+ s public.poker_seats_v1%rowtype;
+ previous jsonb;
+ due bigint;
+ paid bigint:=0;
+ target bigint;
+ raise_size bigint;
+ pending int;
+ survivors int;
+ next_seat int;
+ new_version bigint;
+ result jsonb;
 BEGIN
- SELECT pg_get_functiondef('public.poker_action_v1(uuid,uuid,uuid,bigint,text,bigint)'::regprocedure)
- INTO definition;
- original:=definition;
- definition:=replace(definition,
-   $old$public.poker_action_v1(p_table uuid, p_actor uuid, p_action_id uuid, p_version bigint, p_action text, p_amount bigint DEFAULT 0)$old$,
-   $new$public.poker_action_v3(p_table uuid, p_actor uuid, p_action_id uuid, p_version bigint, p_action text, p_amount bigint DEFAULT 0, p_system_timeout boolean DEFAULT false)$new$);
- definition:=replace(definition,
-  $old$due=greatest(0,t.current_bet-s.street_bet);$old$,
-  $new$due=greatest(0,t.current_bet-s.street_bet);
- if p_system_timeout then
-  if t.turn_deadline_at is null or t.turn_deadline_at>clock_timestamp() then raise exception 'TURN_NOT_EXPIRED';end if;
-  if p_action<>case when due=0 then 'check' else 'fold' end then raise exception 'BAD_TIMEOUT_ACTION';end if;
- else
-  if t.turn_deadline_at is null or t.turn_deadline_at<=clock_timestamp() then raise exception 'TURN_DEADLINE_EXPIRED';end if;
- end if;$new$);
- definition:=replace(definition,
-  $old$set turn_index=next_seat where id=p_table;$old$,
-  $new$set turn_index=next_seat,turn_started_at=clock_timestamp(),turn_deadline_at=clock_timestamp()+interval '10 seconds',turn_extension_used=false where id=p_table;$new$);
- definition:=replace(definition,
-  $old$set status='showdown',turn_index=null where id=p_table;$old$,
-  $new$set status='showdown',turn_index=null,turn_started_at=null,turn_deadline_at=null,turn_extension_used=false where id=p_table;$new$);
- definition:=replace(definition,
-  $old$set status='complete',turn_index=null where id=p_table;$old$,
-  $new$set status='complete',turn_index=null,turn_started_at=null,turn_deadline_at=null,turn_extension_used=false where id=p_table;$new$);
- definition:=replace(definition,'end $function$','end; $function$');
- IF definition=original OR position('p_system_timeout boolean' in definition)=0
-   OR position('TURN_DEADLINE_EXPIRED' in definition)=0 OR
-   position('turn_deadline_at=clock_timestamp()+' in definition)=0
- THEN RAISE EXCEPTION 'ACTION_DEADLINE_PATCH_FAILED'; END IF;
- EXECUTE definition;
+ IF p_actor IS NULL OR p_action_id IS NULL OR p_version<0 THEN RAISE EXCEPTION 'INVALID_REQUEST';END IF;
+ SELECT * INTO t FROM public.poker_tables_v1 WHERE id=p_table FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'TABLE_NOT_FOUND';END IF;
+ SELECT a.result INTO previous FROM public.poker_actions_v1 a WHERE a.table_id=p_table AND a.action_id=p_action_id;
+ IF FOUND THEN RETURN previous;END IF;
+ IF t.status<>'playing' OR t.version<>p_version THEN RAISE EXCEPTION 'INACTIVE_OR_STALE';END IF;
+ SELECT * INTO s FROM public.poker_seats_v1 WHERE table_id=p_table AND seat_no=t.turn_index FOR UPDATE;
+ IF NOT FOUND OR s.user_id<>p_actor OR s.folded OR s.all_in THEN RAISE EXCEPTION 'NOT_YOUR_TURN';END IF;
+ due=greatest(0,t.current_bet-s.street_bet);
+ IF p_system_timeout THEN
+   IF t.turn_deadline_at IS NULL OR t.turn_deadline_at>clock_timestamp() THEN RAISE EXCEPTION 'TURN_NOT_EXPIRED';END IF;
+   IF p_action<>(CASE WHEN due=0 THEN 'check' ELSE 'fold' END) THEN RAISE EXCEPTION 'BAD_TIMEOUT_ACTION';END IF;
+ ELSE
+   IF t.turn_deadline_at IS NULL OR t.turn_deadline_at<=clock_timestamp() THEN RAISE EXCEPTION 'TURN_DEADLINE_EXPIRED';END IF;
+ END IF;
+ IF p_action='fold' THEN
+   UPDATE public.poker_seats_v1 SET folded=true,acted=true WHERE table_id=p_table AND seat_no=s.seat_no;
+ ELSIF p_action='check' THEN
+   IF due<>0 THEN RAISE EXCEPTION 'CANNOT_CHECK';END IF;
+   UPDATE public.poker_seats_v1 SET acted=true WHERE table_id=p_table AND seat_no=s.seat_no;
+ ELSIF p_action IN ('call','allin','raise','bet') THEN
+   IF p_action='call' THEN paid=least(due,s.stack);
+   ELSIF p_action='allin' THEN
+     paid=s.stack;
+     IF s.acted AND s.street_bet+paid>t.current_bet THEN RAISE EXCEPTION 'NOT_REOPENED';END IF;
+   ELSE
+     IF s.acted OR p_amount IS NULL OR p_amount<=t.current_bet THEN RAISE EXCEPTION 'INVALID_RAISE';END IF;
+     IF (p_action='bet' AND t.current_bet<>0) OR (p_action='raise' AND t.current_bet=0) THEN RAISE EXCEPTION 'INVALID_BET_TYPE';END IF;
+     paid=p_amount-s.street_bet;
+     IF paid>s.stack OR paid<=0 OR p_amount-t.current_bet<t.min_raise THEN RAISE EXCEPTION 'INVALID_RAISE';END IF;
+   END IF;
+   target=s.street_bet+paid;
+   IF target>t.current_bet THEN
+     raise_size=target-t.current_bet;
+     UPDATE public.poker_tables_v1 SET current_bet=target WHERE id=p_table;
+     IF raise_size>=t.min_raise THEN
+       UPDATE public.poker_tables_v1 SET min_raise=raise_size WHERE id=p_table;
+       UPDATE public.poker_seats_v1 SET acted=false
+       WHERE table_id=p_table AND seat_no<>s.seat_no AND NOT folded AND NOT all_in;
+     END IF;
+   END IF;
+   UPDATE public.poker_seats_v1
+     SET stack=stack-paid,committed=committed+paid,street_bet=street_bet+paid,
+         all_in=(stack=paid),acted=true
+     WHERE table_id=p_table AND seat_no=s.seat_no;
+ ELSE RAISE EXCEPTION 'UNKNOWN_ACTION';END IF;
+ SELECT count(*) INTO survivors FROM public.poker_seats_v1 WHERE table_id=p_table AND NOT folded;
+ IF survivors=1 THEN
+   UPDATE public.poker_seats_v1
+     SET stack=stack+(SELECT coalesce(sum(committed),0) FROM public.poker_seats_v1 WHERE table_id=p_table)
+     WHERE table_id=p_table AND NOT folded;
+   UPDATE public.poker_seats_v1 SET committed=0,street_bet=0 WHERE table_id=p_table;
+   UPDATE public.poker_tables_v1 SET status='complete',turn_index=null,
+     turn_started_at=null,turn_deadline_at=null,turn_extension_used=false WHERE id=p_table;
+ ELSE
+   SELECT count(*) INTO pending
+    FROM public.poker_seats_v1 x JOIN public.poker_tables_v1 y ON y.id=x.table_id
+    WHERE x.table_id=p_table AND NOT x.folded AND NOT x.all_in
+      AND (NOT x.acted OR x.street_bet<y.current_bet);
+   IF pending>0 THEN
+     SELECT x.seat_no INTO next_seat
+      FROM public.poker_seats_v1 x JOIN public.poker_tables_v1 y ON y.id=x.table_id
+      WHERE x.table_id=p_table AND NOT x.folded AND NOT x.all_in
+        AND (NOT x.acted OR x.street_bet<y.current_bet)
+      ORDER BY (x.seat_no-s.seat_no+10)%10 LIMIT 1;
+     UPDATE public.poker_tables_v1 SET turn_index=next_seat,
+       turn_started_at=clock_timestamp(),turn_deadline_at=clock_timestamp()+interval '10 seconds',
+       turn_extension_used=false WHERE id=p_table;
+   ELSE
+     UPDATE public.poker_tables_v1 SET status='showdown',turn_index=null,
+       turn_started_at=null,turn_deadline_at=null,turn_extension_used=false WHERE id=p_table;
+   END IF;
+ END IF;
+ UPDATE public.poker_tables_v1 SET version=version+1,last_action_at=clock_timestamp()
+   WHERE id=p_table RETURNING version INTO new_version;
+ result=jsonb_build_object('tableId',p_table,'version',new_version,
+   'accepted',true,'chipsCommitted',paid,'action',p_action,'timeout',p_system_timeout);
+ INSERT INTO public.poker_actions_v1(table_id,action_id,actor_id,before_version,after_version,action,chips,result)
+ VALUES(p_table,p_action_id,p_actor,p_version,new_version,p_action,paid,result);
+ RETURN result;
 END $$;
 
 CREATE OR REPLACE FUNCTION public.poker_timeout_turn_v1(p_table uuid)
