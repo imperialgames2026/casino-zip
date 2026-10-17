@@ -33,6 +33,17 @@ try {
   await visit(testerPage, '/Support', 'Support Center');
   console.log('PASS browser authenticated tester Support page');
 
+  await visit(testerPage, '/Profile', 'Player Profile');
+  await testerPage.getByText('Staging balances').waitFor();
+  assert.equal(await testerPage.getByRole('button', { name: 'Set display name' }).count(), 0);
+  assert.equal(await testerPage.getByText('Real crypto deposits, withdrawals', { exact: false }).count(), 1);
+  console.log('PASS browser tester own profile and no nickname mutation control');
+
+  await visit(testerPage, '/TransactionHistory', 'Transaction History');
+  await testerPage.getByText('staging-ledger history only', { exact: false }).waitFor();
+  assert.equal(await testerPage.getByText('Transaction history could not be loaded', { exact: false }).count(), 0);
+  console.log('PASS browser authenticated owner-only staging transaction history');
+
   await visit(testerPage, '/ProvablyFair', 'Provably Fair · Practice Verification');
   await testerPage.getByRole('heading', { name: 'Your revealed practice rounds' }).waitFor();
   console.log('PASS browser original ProvablyFair page');
