@@ -11,9 +11,13 @@ describe("staging Edge source must prevent tester-triggered mutations", () => {
   ]) {
     it(name + " checks role from server-side user_roles before a mutation", () => {
       const source = file(name);
+      const eligibility = source.indexOf('.from("profiles").select("is_excluded")');
       const roleLookup = source.indexOf('.from("user_roles")');
       const guard = source.indexOf('roleRow?.role==="tester"');
       const mutation = source.indexOf(mutationMarker);
+      expect(eligibility).toBeGreaterThan(-1);
+      expect(eligibility).toBeLessThan(roleLookup);
+      expect(source).toContain('error:"Account ineligible for gameplay"');
       expect(roleLookup).toBeGreaterThan(-1);
       expect(guard).toBeGreaterThan(roleLookup);
       expect(mutation).toBeGreaterThan(guard);
