@@ -5,6 +5,12 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      run_staging_smoke:
+        description: 'Run authenticated, state-changing staging smoke tests (requires staging credentials)'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -46,7 +52,7 @@ jobs:
         run: npm run build
 
   staging-smoke:
-    if: ${{ github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_staging_smoke == true }}
     needs: verify
     runs-on: ubuntu-latest
     environment: staging
