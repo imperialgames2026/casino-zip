@@ -41,3 +41,15 @@ The legacy ZIP contains `src/api/base44Client.js`, `src/lib/AuthContext.jsx`, an
 **Remaining release gates:** finish the legacy entity/function and admin feature migration, guarantee all game and ledger operations are server-authoritative and idempotent, complete verified Sumsub sandbox integration and legal/privacy checks, run authenticated E2E browser flows, concurrency/replay/recovery tests and independent security review. Keep draft PR unmerged and live Cloudflare unchanged.
 
 **Do not interpret a passing migration-preview bundle as financial or production readiness.**
+
+
+## Authenticated staging CI run #164 — 2026-10-17
+
+The first opt-in authenticated run reached both optional jobs:
+
+- Read-only tester E2E: failed because the configured `STAGING_TEST_EMAIL` credentials were not a tester (the test correctly rejected a non-tester identity). Fixed configuration by introducing **separate** `STAGING_READONLY_TEST_EMAIL` / `STAGING_READONLY_TEST_PASSWORD` secrets, used only by the read-only job. A real `public.user_roles.role='tester'` account must be used.
+- Provably fair smoke: the first `dice` reveal verified but its **idempotent replay** verification failed. Cause: the first reveal returned `{dice, sum}`; Postgres JSONB may reorder persisted object keys to `{sum, dice}`. The verifier incorrectly compared the two JSON objects using `JSON.stringify`, which is sensitive to property order. The verifier now checks the expected HMAC-derived values by field; regression tests cover reordering, tampering and extra keys. No game outcome calculation or funds handling was changed.
+- `staging-smoke` uses the write-capable `STAGING_TEST_EMAIL` / `STAGING_TEST_PASSWORD` and must remain unchecked for ordinary permission testing. In run #164 both optional jobs were checked; the smoke test produced one staging-only, revealed dice commitment and did **not** move funds.
+- Release confidence still depends on the **new** test and full CI passing after these commits, and a new explicitly requested authenticated run using the isolated Tester credentials.
+
+DO NOT store credential values in this repository, GitHub issues, or chat. Configure only through GitHub `Settings → Secrets and variables → Actions` or the `staging` environment secrets. Account used for `staging-smoke` must have non-tester gameplay permission. Manual external tests should remain staging-only.
