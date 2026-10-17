@@ -60,6 +60,9 @@ Deno.serve(async(req)=>{
  const db=createClient(url,secret,{auth:{persistSession:false}});
  try{
   const body=await req.json();const action=body.action;
+  const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
+  if(roleCheckError)return json({error:"Cannot check account permission"},503);
+  if(roleRow?.role==="tester")return json({error:"Read-only tester account"},403);
   if(action==="create"){
    const {data,error}=await db.rpc("poker_create_v1",{p_owner:user.id,p_stack:1000});if(error)throw error;
    return json({tableId:data,practiceOnly:true});
