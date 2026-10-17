@@ -37,7 +37,9 @@ Deno.serve(async (req: Request) => {
   // An excluded account may access support to appeal its restrictions.
   if (!profile || profile.id !== user.id || typeof profile.is_excluded !== "boolean" ||
       !role || !roles.has(role.role)) return reply({ error: "Account unavailable" }, 403);
-  const isStaff = staff.has(role.role);
+  // An excluded staff account may still open a personal appeal, but may not
+  // read, moderate or answer other players' support conversations.
+  const isStaff = staff.has(role.role) && profile.is_excluded === false;
 
   const raw = await req.text().catch(() => "");
   if (raw.length > 4096) return reply({ error: "Request too large" }, 413);
