@@ -25,7 +25,7 @@ replace(
 );
 replace(
   "const AuthenticatedApp = () => {",
-  "const AuthenticatedApp = () => {\\n  // React Router updates this hook on every client-side navigation.\\n  const routeLocation = useLocation();"
+  "const AuthenticatedApp = () => {\n  // React Router updates this hook on every client-side navigation.\n  const routeLocation = useLocation();"
 );
 replace(
   "const { isLoadingAuth, isLoadingPublicSettings, authError, navigateToLogin } = useAuth();",
