@@ -34,7 +34,7 @@ try {
   console.log('PASS browser authenticated tester Support page');
 
   await visit(testerPage, '/Profile', 'Player Profile');
-  await testerPage.getByText('Staging balances').waitFor();
+  await testerPage.getByRole('heading', { name: 'Staging balances' }).waitFor();
   assert.equal(await testerPage.getByRole('button', { name: 'Set display name' }).count(), 0);
   assert.equal(await testerPage.getByText('Real crypto deposits, withdrawals', { exact: false }).count(), 1);
   console.log('PASS browser tester own profile and no nickname mutation control');
