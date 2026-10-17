@@ -16,7 +16,7 @@ describe('Imperial Games crypto-first payment rail plan', () => {
       expect(migration).toContain("('"+rail+"','future_fiat','deferred'");
     }
     expect(migration).toContain('No personal P2P transfers');
-    expect(migration).toContain('business payment APIs');
+    expect(migration).toContain('Business payment APIs');
   });
   it('prevents all live payments at database level', () => {
     for (const flag of ['accepts_funds','pays_funds','integration_approved','provider_connected']) {
