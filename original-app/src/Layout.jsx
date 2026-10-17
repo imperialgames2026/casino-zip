@@ -91,13 +91,11 @@ export default function Layout({ children, currentPageName }) {
   const navItems = [
     { name: 'Home', icon: Home, page: 'Home' },
     { name: 'Practice Dice', icon: Gamepad2, page: 'PlayDice' },
-    { name: 'Games', icon: Gamepad2, page: 'Games' },
-    { name: 'Poker', icon: Crown, page: 'PokerLobby' },
-    { name: 'Store', icon: ShoppingBag, page: 'Store' },
-    { name: 'Bonuses', icon: Crown, page: 'Bonuses' },
-    { name: 'Crypto', icon: Wallet, page: 'CryptoWallet' },
-    { name: 'Referrals', icon: Users, page: 'Referrals' },
-    { name: 'Support', icon: Settings, page: 'Support' },
+    { name: 'Profile', icon: User, page: 'Profile' },
+    { name: 'History', icon: Wallet, page: 'TransactionHistory' },
+    { name: 'Fairness', icon: ShieldCheck, page: 'ProvablyFair' },
+    { name: 'Crypto Roadmap', icon: Coins, page: 'DepositNetworks' },
+    { name: 'Support', icon: MessageCircle, page: 'Support' },
   ];
 
   const isActive = (pageName) => currentPageName === pageName;
