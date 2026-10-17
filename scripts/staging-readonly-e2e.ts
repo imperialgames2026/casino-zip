@@ -47,6 +47,19 @@ try {
   if (!Array.isArray(list.events)) throw new Error('Practice event list missing');
   console.log('PASS read-only event listing');
 
+  const leaderboard = await call('legacy-leaderboard-v1', { action: 'getWeeklyTokenLeaderboard' }, 200);
+  if (leaderboard.success !== true || leaderboard.practiceOnly !== true ||
+      leaderboard.currency !== 'CENT' || !Array.isArray(leaderboard.leaderboard)) {
+    throw new Error('Practice leaderboard payload invalid');
+  }
+  for (const player of leaderboard.leaderboard) {
+    if (!/^Player [0-9A-F]{8}$/.test(player.name) || player.email ||
+        player.rank < 1 || player.rank > 10 || Number(player.total_won) <= 0) {
+      throw new Error('Practice leaderboard leaked an identity or invalid win amount');
+    }
+  }
+  console.log('PASS authenticated pseudonymous practice leaderboard');
+
   for (const [name, body] of [
     ['poker-events-v1', { action: 'register', eventId: crypto.randomUUID() }],
     ['poker-table-v1', { action: 'create' }],
