@@ -77,6 +77,17 @@ try {
   }
   console.log('PASS disabled 12-network crypto catalog and uncredited own observations');
 
+  const ownSupport = await call('ig-support-v1', { action: 'mine' }, 200);
+  if (!Array.isArray(ownSupport.tickets)) throw new Error('Support ticket listing unavailable');
+  for (const ticket of ownSupport.tickets) {
+    if (!ticket.id || !ticket.subject || !ticket.status || 'user_id' in ticket) {
+      throw new Error('Support ticket listing leaked or omitted an expected field');
+    }
+  }
+  const deniedSupport = await call('ig-support-v1', { action: 'queue' }, 403);
+  if (deniedSupport.error !== 'Staff role required') throw new Error('Read-only Tester gained support staff access');
+  console.log('PASS authenticated support ticket owner-read and staff queue denial');
+
   for (const [name, body] of [
     ['poker-events-v1', { action: 'register', eventId: crypto.randomUUID() }],
     ['poker-table-v1', { action: 'create' }],
