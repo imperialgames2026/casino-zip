@@ -28,6 +28,8 @@ async function visit(page, route, heading) {
 try {
   const tester = await browser.newContext({ viewport: { width: 1365, height: 900 } });
   const testerPage = await login(tester, testerEmail, testerPassword);
+  testerPage.on('pageerror', err => console.log('DEBUG page JS error:', err.message.slice(0, 1000)));
+  testerPage.on('console', msg => { if (msg.type() === 'error') console.log('DEBUG browser console:', msg.text().slice(0, 850)); });
   await visit(testerPage, '/Support', 'Support Center');
   console.log('PASS browser authenticated tester Support page');
 
