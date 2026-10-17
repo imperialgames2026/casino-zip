@@ -22,6 +22,8 @@ Deno.serve(async(req)=>{
  if(authError||!user||user.is_anonymous)return respond({error:"Unauthorized"},401);
  const db=createClient(url,secret,{auth:{persistSession:false}});
  let input:Record<string,unknown>;try{input=await req.json();}catch{return respond({error:"Invalid JSON"},400);}
+ const {data:eligibility,error:eligibilityError}=await db.from("profiles").select("is_excluded").eq("id",user.id).maybeSingle();
+ if(eligibilityError || !eligibility || eligibility.is_excluded !== false)return respond({error:"Account ineligible for gameplay"},403);
  const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
  if(roleCheckError)return respond({error:"Cannot check account permission"},503);
  if(roleRow?.role==="tester")return respond({error:"Read-only tester account"},403);
