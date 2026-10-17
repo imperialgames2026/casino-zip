@@ -22,7 +22,16 @@ const score5=(hand:C[]):number[]=>{
 const compare=(a:number[],b:number[])=>{for(let i=0;i<Math.max(a.length,b.length);i++)if((a[i]??0)!==(b[i]??0))return Math.sign((a[i]??0)-(b[i]??0));return 0;};
 const best=(cards:C[])=>{let result:number[]=[];for(let a=0;a<7;a++)for(let b=a+1;b<7;b++){const candidate=score5(cards.filter((_,i)=>i!==a&&i!==b));if(!result.length||compare(candidate,result)>0)result=candidate;}return result;};
 const random=(max:number)=>{const upper=4294967296,cutoff=Math.floor(upper/max)*max;let value=0;do{value=crypto.getRandomValues(new Uint32Array(1))[0];}while(value>=cutoff);return value%max;};
-const newDeck=()=>{const deck:C[]=[];for(const suit of ["c","d","h","s"] as const)for(let rank=2;rank<=14;rank++)deck.push({rank,suit});for(let i=deck.length-1;i>0;i--){const j=random(i+1);[deck[i],deck[j]]=[deck[j],deck[i]];}return deck;};
+async function committedDeck(seed:string,handId:string):Promise<{deck:C[];commitment:string}>{
+ const encoder=new TextEncoder();
+ const commitment=hex(new Uint8Array(await crypto.subtle.digest("SHA-256",encoder.encode(seed+":"+handId))));
+ const key=await crypto.subtle.importKey("raw",encoder.encode(seed),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+ let counter=0;
+ async function sample(n:number){const limit=Math.floor(4294967296/n)*n;for(;;){const mac=await crypto.subtle.sign("HMAC",key,encoder.encode(handId+":"+counter++));const value=new DataView(mac).getUint32(0,false);if(value<limit)return value%n;}}
+ const deck:C[]=[];for(const suit of ["c","d","h","s"] as const)for(let rank=2;rank<=14;rank++)deck.push({rank,suit});
+ for(let i=deck.length-1;i>0;i--){const j=await sample(i+1);[deck[i],deck[j]]=[deck[j],deck[i]];}
+ return {deck,commitment};
+}
 function awards(seats:{seat_no:number;committed:number;folded:boolean;private_hole:C[]}[],board:C[],button:number){
  const scores=new Map<number,number[]>();for(const seat of seats)if(!seat.folded)scores.set(seat.seat_no,best([...seat.private_hole,...board]));
  const levels=[...new Set(seats.map(s=>s.committed).filter(n=>n>0))].sort((a,b)=>a-b),out:{seat:number;chips:number}[]=[];
@@ -67,11 +76,9 @@ Deno.serve(async(req)=>{
   if(tableError||!table)return json({error:"Table unavailable"},404);
   if(action==="start"){
    if(table.owner_id!==user.id)return json({error:"Only table owner may start"},403);
-   const deck=newDeck(),seed=crypto.randomUUID(),commitment=hex(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(seed+":"+JSON.stringify(deck)))));
-   const {data,error}=await db.rpc("poker_start_v1",{p_table:tableId,p_owner:user.id,p_deck:deck,p_commitment:commitment});if(error)throw error;
-   // Seed is only stored in a service-role-readable column, and never returned before hand completion.
-   const {error:seedError}=await db.from("poker_tables_v1").update({seed_secret:seed}).eq("id",tableId).eq("status","playing");
-   if(seedError)throw seedError;
+   const seed=crypto.randomUUID()+crypto.randomUUID(),handNo=Number(table.hand_no)+1;
+   const {deck,commitment}=await committedDeck(seed,tableId+":"+handNo);
+   const {data,error}=await db.rpc("poker_start_v2",{p_table:tableId,p_owner:user.id,p_deck:deck,p_commitment:commitment,p_seed:seed,p_hand_no:handNo});if(error)throw error;
    return json({started:true,...data,deckCommitment:commitment});
   }
   if(action==="act"){
@@ -96,8 +103,8 @@ Deno.serve(async(req)=>{
    const {data:seats,error:seatsError}=await db.from("poker_seats_v1").select("seat_no,user_id,stack,committed,street_bet,folded,all_in,acted").eq("table_id",tableId).order("seat_no");
    if(seatsError)throw seatsError;
    const {data:hole}=await db.from("poker_seats_v1").select("private_hole").eq("table_id",tableId).eq("user_id",user.id).single();
-   const publicTable={id:table.id,status:table.status,version:table.version,button:table.button,turnIndex:table.turn_index,street:table.street,board:table.board,smallBlind:table.small_blind,bigBlind:table.big_blind,currentBet:table.current_bet,minRaise:table.min_raise,deckCommitment:table.deck_commitment};
-   return json({table:publicTable,seats,holeCards:hole?.private_hole??[], ...(table.status==="complete"?{revealedSeed:table.seed_secret}: {})});
+   const publicTable={id:table.id,status:table.status,version:table.version,button:table.button,turnIndex:table.turn_index,street:table.street,board:table.board,smallBlind:table.small_blind,bigBlind:table.big_blind,currentBet:table.current_bet,minRaise:table.min_raise,deckCommitment:table.deck_commitment,handNo:table.hand_no,eventId:table.event_id};
+   return json({table:publicTable,seats,holeCards:hole?.private_hole??[], ...(table.status==="complete"?{revealedSeed:table.seed_secret,verificationHandId:tableId+":"+table.hand_no}: {})});
   }
   return json({error:"Unsupported action"},400);
  }catch(error){const message=error instanceof Error?error.message:"Internal error";return json({error:message},409);}
