@@ -63,3 +63,18 @@ The `poker-table-v1` Edge Function uses Supabase Auth; only seated users can req
 - Sweepstakes/financial compliance, real-value settlement and production deployment are disabled.
 
 Do not merge into `main` or activate real-value play without a clean CI and live session test.
+
+## Ten-second turn clock and purchasable time extension (staging)
+
+- **Base time per turn:** 10 seconds, measured using Postgres `turn_started_at` and `turn_deadline_at`. Each new actor and each new betting street gets a fresh 10-second deadline.
+- **Expiry:** Check automatically if there is no wager to call; otherwise fold. Late actions are rejected by the database even if the UI is delayed or the user disconnects.
+- **Unattended tables:** `pg_cron` job `imperial-poker-turn-timeouts` runs `public.poker_process_due_turns_v1(50)` every **1 second**. The scheduled job was observed active and succeeding in staging, and an expired test turn was folded without a browser request. Monitor job load when scaling and tune batching if necessary.
+- **Extension:** Once per **turn**, add exactly 30 seconds to the existing deadline (for up to 40 seconds total). The server checks turn ownership, expiry, idempotency key and table revision with row locks.
+- **Price:** Configured at **0.15 IGD**. IGD wallet debit and the matching financial transaction record execute in the same database transaction as the extension. The debit path passed a rollback-only test, including insufficient funds, exact 0.15 charge, no duplicate charge on retry, and ledger receipt. **Paid mode is disabled by default** on staging.
+- **IGN equivalent:** Not configured. The existing schema has an IGT balance, not an IGN balance; never infer that IGN equals IGT. The server rejects IGN purchases until a specific asset, exchange rate and ledger mapping are approved.
+- **How to test without IGD:** On the player’s turn, click **Try +30s (free staging preview)** before the 10-second deadline. You should see the countdown extend to approximately 40 seconds. The practice extension never modifies the wallet. It is enabled only in staging until paid mode is audited.
+- **Testing a timeout:** Leave the browser unattended for 10 seconds. You should see the turn automatically check or fold and transfer to the next player. The page polls for snapshots, but the server timeout job does not depend on the browser staying open.
+- **Database regression test:** Run `supabase/tests/poker_timebank_smoke.sql` in staging. It rolls back all changes. Separate tests verified the paid debit path, simultaneous extension requests (one accepted), free-check timeout, and the server background watchdog.
+- **Operating control:** To suspend the job if required, use the Supabase SQL editor to run `SELECT cron.unschedule('imperial-poker-turn-timeouts');`. Do not disable deadlines in the database.
+
+**Remaining gate:** The full React app build and signed-in two-browser E2E are unverified. Do not call paid IGD extensions production-ready until permissions, account eligibility, refunds/disputes and real-value wallet behavior pass review.
