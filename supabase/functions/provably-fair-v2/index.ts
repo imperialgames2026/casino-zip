@@ -22,6 +22,9 @@ Deno.serve(async(req)=>{
  if(authError||!user||user.is_anonymous)return respond({error:"Unauthorized"},401);
  const db=createClient(url,secret,{auth:{persistSession:false}});
  let input:Record<string,unknown>;try{input=await req.json();}catch{return respond({error:"Invalid JSON"},400);}
+ const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
+ if(roleCheckError)return respond({error:"Cannot check account permission"},503);
+ if(roleRow?.role==="tester")return respond({error:"Read-only tester account"},403);
  if(input.action==="commit"){
   if(!["dice","coin","number"].includes(String(input.game)))return respond({error:"Invalid game"},400);
   const {count,error:countError}=await db.from("fair_seed_commitments").select("id",{count:"exact",head:true}).eq("user_id",user.id).eq("status","committed");
