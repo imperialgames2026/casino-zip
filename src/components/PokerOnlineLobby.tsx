@@ -12,7 +12,7 @@ async function invoke(name:string,body:Record<string,unknown>){
  if(data?.error)throw Error(data.error);
  return data;
 }
-export default function PokerOnlineLobby({userId}:{userId:string|null}){
+export default function PokerOnlineLobby({userId,readOnly=false}:{userId:string|null;readOnly?:boolean}){
  const [events,setEvents]=useState<EventRow[]>([]);
  const [tableId,setTableId]=useState("");
  const [snapshot,setSnapshot]=useState<TableSnapshot|null>(null);
@@ -49,6 +49,14 @@ export default function PokerOnlineLobby({userId}:{userId:string|null}){
  const remainingSeconds=Math.ceil(remainingMs/1000);
  const turnOpen=isMyTurn&&remainingMs>0;
  const canExtend=turnOpen&&!snapshot?.table.turnExtensionUsed;
+ if(readOnly)return <section aria-label="Read-only poker events" style={{background:"#19243b",border:"1px solid #34415a",borderRadius:16,padding:24,marginTop:24}}>
+   <h2>Online Poker · Read-only preview</h2>
+   <p>Tester accounts can inspect published practice events. Registration, bets, actions and settlement are disabled.</p>
+   <button type="button" onClick={()=>void loadEvents()} disabled={!userId}>Refresh events</button>
+   {events.length===0&&<p>No published practice events are currently visible.</p>}
+   <ul>{events.map(e=><li key={e.id}>{e.name} · {e.format} · {e.status} · {e.registered}/{e.maxPlayers} registered</li>)}</ul>
+   {message&&<p role="status">{message}</p>}
+ </section>;
  return <section style={{background:"#19243b",border:"1px solid #34415a",borderRadius:16,padding:24,marginTop:24}}>
   <h2>Online Poker · Staging practice tables</h2>
   <p>Use separate signed-in accounts to test multiplayer. No real-value buy-ins, prizes, rake or withdrawals.</p>
