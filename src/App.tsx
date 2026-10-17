@@ -5,6 +5,7 @@ import { supabase } from "./lib/supabase";
 import { verifyFairRound } from "./lib/fairness";
 import TableGamesPreview from "./components/TableGamesPreview";
 import PokerTournamentBuilder from "./components/PokerTournamentBuilder";
+import PokerOnlineLobby from "./components/PokerOnlineLobby";
 
 type Page = "Lobby" | "Games" | "Wallet" | "Account" | "Admin";
 const games = [
@@ -113,6 +114,7 @@ export default function App() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 16 }}>
           {games.map(game => <article key={game.type} style={panelStyle}><div style={{ fontSize: 48 }}>{game.icon}</div><h2>{game.name}</h2><p>{game.description}</p><button style={buttonStyle} onClick={() => { setActiveGame(game.type); setGuess(game.type === "number" ? "1" : "heads"); setResult(""); }}>Play demo</button></article>)}
         </div>
+        <PokerOnlineLobby userId={session?.user.id??null} />
         <TableGamesPreview />
         {activeGame && <section style={{ ...panelStyle, marginTop: 24 }} aria-label="Selected game"><h2>{games.find(g => g.type === activeGame)?.name}</h2>
           {activeGame === "coin" && <label>Prediction <select style={inputStyle} value={guess} onChange={e => setGuess(e.target.value)}><option value="heads">Heads</option><option value="tails">Tails</option></select></label>}
