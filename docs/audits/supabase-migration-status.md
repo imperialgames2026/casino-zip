@@ -24,3 +24,20 @@ The legacy ZIP contains `src/api/base44Client.js`, `src/lib/AuthContext.jsx`, an
 - Added `IGNWalletPanel` to the Wallet page and `IGNTreasuryPanel` to the Admin page. Royal Treasury uses authenticated `public.user_roles` Superadmin access checks. Staging `user_roles` was separately observed to have RLS enabled with a self-read policy on 2026-10-17.
 - The approved 10-billion-token distribution is a **working budget model**, not a set of transferred on-chain balances. Treasury registration, multisig, transfers, actual circulating supply, token prices, vesting and private treasury DB tables are not implemented.
 - Added source-level Vitest coverage for allocation precision, mocked Devnet balance/RPC behavior and deny-by-default role checks. GitHub CI completion and real browser/Phantom/RPC end-to-end behavior must still be verified. Existing Poker staging behavior was not changed by these panels.
+
+## Update: original application migration tranche 1 — 2026-10-17
+
+**Source inventory:** The original `ig-games.zip` contains 390 entries, including 270 JSX/TSX modules, 23 Base44 entity definitions, and 61 Base44 function entrypoints. Its separate locked-dependency CI build passes.
+
+**Implemented on the integration branch:**
+- `migration/legacy-overlay/` builds the original app with a Supabase client/auth provider and Base44-free Vite config, without deleting or replacing the original source.
+- The temporary legacy-facing import `src/api/base44Client.js` is a fail-closed Supabase adapter. Signed-in identity comes from `auth.getUser()`, then owner-scoped profile and canonical `user_roles` checks. This import name does not mean the Base44 SDK is still being called.
+- Only authenticated own-wallet/own-transaction reads and the one-time display-name operation have targeted mappings. Unmigrated legacy writes, sensitive uploads, admin listings, and functions reject explicitly.
+- The original app's exclusion catch is changed to fail closed; its migration preview blocks gameplay, money movements, identity capture and admin routes. This is a **migration preview only**, not a finished casino.
+- CI now independently builds (1) unchanged original ZIP, (2) root scaffold, and (3) original ZIP with Supabase overlay.
+- Staging game functions `poker-events-v1` v5, `poker-table-v1` v9, and `provably-fair-v2` v4 are active with JWT verification, exclusion checks, recognized-role checks and read-only tester denial. Verified deployed source matches GitHub.
+- `scripts/staging-readonly-e2e.ts` and an opt-in `readonly-auth-e2e` GitHub Actions job check authenticated tester isolation, read-only practice listing and expected HTTP 403 game-operation denials. The test is **not yet executed**; GitHub environment secrets must supply an actual Tester login.
+
+**Remaining release gates:** finish the legacy entity/function and admin feature migration, guarantee all game and ledger operations are server-authoritative and idempotent, complete verified Sumsub sandbox integration and legal/privacy checks, run authenticated E2E browser flows, concurrency/replay/recovery tests and independent security review. Keep draft PR unmerged and live Cloudflare unchanged.
+
+**Do not interpret a passing migration-preview bundle as financial or production readiness.**
