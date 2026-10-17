@@ -1,5 +1,9 @@
 # Imperial Games
 
+> **Build identity warning (2026-10-17):** This working tree is a security-focused React/TypeScript staging **scaffold**, not the complete original Imperial Games frontend. The original 390-entry app remains in `ig-games.zip` at the repository root. It includes roughly 291 frontend source paths and 61 legacy Base44 Edge Function entrypoints that still require careful migration. Do **not** deploy the scaffold over the existing casino or merge this PR expecting all casino features to exist.
+>
+> GitHub CI is configured to check both `npm run build` for the staging scaffold and a separate clean build of `ig-games.zip`. No successful CI execution has yet been observed. Existing production/Pages settings should remain unchanged while migration is unfinished.
+
 React + TypeScript + Vite application with optional Supabase authentication and three free-play demo games.
 
 ## Local development
