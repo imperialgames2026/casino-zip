@@ -1,1 +1,3 @@
 Trusted integration-branch trigger for the original Imperial Games Chromium staging browser E2E. Uses configured staging secrets and practice-only dice, with no real deposits, wagers, or withdrawals.
+
+Browser diagnostics pass 2; preserve original app and staging funds gates.
