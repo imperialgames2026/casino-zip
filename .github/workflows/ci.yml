@@ -84,6 +84,13 @@ jobs:
       - name: Compile preserved casino with Supabase adapter
         working-directory: ${{ runner.temp }}/imperial-migrated
         run: npm run build
+      - name: Store migrated preview build for QA (not deployed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: imperial-migrated-preview-dist
+          path: ${{ runner.temp }}/imperial-migrated/dist/
+          if-no-files-found: error
+          retention-days: 7
 
 
 
