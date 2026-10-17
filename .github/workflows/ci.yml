@@ -20,6 +20,31 @@ jobs:
       - run: npm run build
       - run: npm run test
 
+  legacy-archive-build:
+    # The original 390-entry app is still in ig-games.zip; this job MUST catch
+    # failures before anyone tries to replace it with the small React scaffold.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect and safely extract original application
+        run: |
+          test -s ig-games.zip
+          unzip -t ig-games.zip
+          mkdir -p "$RUNNER_TEMP/imperial-legacy"
+          unzip -q ig-games.zip -d "$RUNNER_TEMP/imperial-legacy"
+          test -f "$RUNNER_TEMP/imperial-legacy/package.json"
+          test -f "$RUNNER_TEMP/imperial-legacy/src/App.jsx"
+          test -f "$RUNNER_TEMP/imperial-legacy/package-lock.json"
+      - name: Install original locked dependencies
+        working-directory: ${{ runner.temp }}/imperial-legacy
+        run: npm ci --no-audit --no-fund
+      - name: Build original application
+        working-directory: ${{ runner.temp }}/imperial-legacy
+        run: npm run build
+
   staging-smoke:
     if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: verify
