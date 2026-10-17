@@ -28,8 +28,8 @@ replace(
   "return <SupabaseSignIn />;"
 );
 replace(
-  "  // Render the main app\\n  return (",
-  "  if (authError && authError.type !== 'auth_required') return <main role=\\"alert\\" style={{padding:32}}>Account verification unavailable: {authError.message}</main>;\\n  // Render the main app\\n  return ("
+  "  // Render the main app\n  return (",
+  "  if (authError && authError.type !== 'auth_required') return <main role=\"alert\" style={{padding:32}}>Account verification unavailable: {authError.message}</main>;\n  // Render the main app\n  return ("
 );
 replace(
   "  // Render the main app\n  return (",
