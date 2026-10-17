@@ -1,6 +1,6 @@
-# IGN — Imperial Games Network: tokenomics & casino benchmark blueprint (PROPOSAL)
+# IGN — Imperial Games Network: tokenomics & casino benchmark blueprint (WORKING ALLOCATION APPROVED)
 
-**Status:** design proposal only, not approved tokenomics or Mainnet launch authorization. Last reviewed 2026-10-17. Do not enable wagering, redeemable balances, real-value payouts, wagering-based VIP rewards, revenue-linked staking or token purchases in production without legal, security, risk and financial review.
+**Status:** the 7-bucket distribution percentages and token amounts below were approved by the project owner as the **working design baseline** on 2026-10-17. This is not approval of on-chain transfers, wallet creation, vesting milestones, financial product release, or Mainnet launch. Last reviewed 2026-10-17. Do not enable wagering, redeemable balances, real-value payouts, wagering-based VIP rewards, revenue-linked staking or token purchases in production without legal, security, risk and financial review.
 
 ## Existing facts / architecture alignment
 
@@ -29,7 +29,7 @@
 - Shuffle SHFL: https://help.shuffle.com/en/articles/8282770-shuffle-token-shfl
 - Rollbit RLB whitepaper (2021): https://rollbot.rollbit.com/rlb.pdf
 
-## Draft fixed-supply IGN allocation (not allocated on-chain yet)
+## Approved working fixed-supply IGN allocation (not allocated on-chain yet)
 
 | Bucket | Share | IGN | Proposed administration |
 | --- | ---: | ---: | --- |
@@ -42,7 +42,7 @@
 | Emergency security and contingency reserve | 5% | 500,000,000 | Multisig + incident approvals; do not use as discretionary hidden supply |
 | **Total** | **100%** | **10,000,000,000** | **Fixed supply; no further minting** |
 
-This distribution is a suggested model, not a binding token allocation; the existing Devnet token is currently in a wallet and has not been distributed to these categories.
+This distribution is approved as a **working plan**, not a binding transfer authorization. The existing Devnet token has not been distributed into these buckets. All releases, recipients, lockups and Mainnet decisions remain subject to separate approvals.
 
 ### Treasury/vesting safety
 
@@ -77,7 +77,8 @@ Only use an external price feed when IGN trades at meaningful volume; a Devnet t
 
 ## Release checklist / required owner decisions
 
-- [ ] Approve or modify the proposed percentage buckets, recipients, cliffs, vesting, liquidity budgets and custody multisig members.
+- [x] Approve working percentage buckets and nominal IGN amounts (owner approval, 2026-10-17; no tokens transferred).
+- [ ] Approve recipients, vesting/cliffs, liquidity budgets, wallet addresses and custody multisig members separately.
 - [ ] Decide whether the public name should remain “Imperial Games Network” or “Imperial Games” across site, legal documentation and token registries.
 - [ ] Agree to independent legal review of token distribution, U.S./other jurisdiction restrictions, sweepstakes/crypto/gaming mechanics, marketing and rewards before Mainnet.
 - [ ] Add Devnet-only dashboard, wallet public key binding, explorer links, token-specific balance view and regression tests.
@@ -90,3 +91,7 @@ Only use an external price feed when IGN trades at meaningful volume; a Devnet t
 - Token badge: use original pink big-cat with **seven crown tips** / deep charcoal and metallic gold. Preserve legibility at 32px and 64px; simplified shape for favicon.
 - Lobby feature: clear **IGN** wallet balance with a distinct gold/pink token emblem; label **Devnet / Test** in a visible manner.
 - Treasury view: dark charcoal background, sharp gold typography, hot-pink status accents, accessible contrast, strong number typography. Show **token supply** and **circulating supply** separately and never imply a price or market cap for Devnet.
+
+## Treasury/dashboard continuation
+
+Detailed proposed wallet/account model, UX specifications, role boundaries, implementation contracts, and acceptance criteria: [`IGN_TREASURY_AND_DASHBOARD_DESIGN.md`](./IGN_TREASURY_AND_DASHBOARD_DESIGN.md). Design only; no deployments, custody signers or asset movements.
