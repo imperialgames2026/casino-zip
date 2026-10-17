@@ -59,16 +59,19 @@ try {
 
   await testerPage.goto(base + '/Home');
   await testerPage.locator('nav').first().waitFor({ timeout: 15000 });
-  const pokerLink = testerPage.getByRole('link', { name: 'Poker', exact: true });
-  if (await pokerLink.count()) {
-    await pokerLink.first().click();
-    await testerPage.waitForTimeout(1200);
-    console.log('DEBUG route after Poker link:', new URL(testerPage.url()).pathname);
-    console.log('DEBUG route guard:', JSON.stringify(await testerPage.locator('main[role="alert"]').allTextContents()));
-    console.log('DEBUG visible DOM text:', JSON.stringify((await testerPage.locator('body').innerText()).slice(0,750)));
-    await testerPage.getByText('This page is disabled until its operations have been migrated').waitFor({ timeout: 15000 });
-    console.log('PASS browser React Router blocks old poker route after client navigation');
-  }
+  await testerPage.getByRole('heading', { name: 'Available practice games' }).waitFor({ timeout: 20000 });
+  await testerPage.getByRole('heading', { name: 'Practice Dice', exact: true }).waitFor({ timeout: 20000 });
+  console.log('PASS browser approved Supabase practice Dice game catalog');
+
+  // This checks client-side React Router navigation without exposing an
+  // unfinished Poker link to players in the real staging navigation.
+  await testerPage.evaluate(() => {
+    window.history.pushState({}, '', '/PokerLobby');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  });
+  await testerPage.getByText('This page is disabled until its operations have been migrated', { exact: false })
+    .waitFor({ timeout: 15000 });
+  console.log('PASS browser React Router blocks unfinished casino pages after navigation');
   await tester.close();
 
   const player = await browser.newContext({ viewport: { width: 1365, height: 900 } });
