@@ -163,7 +163,7 @@ jobs:
 
 
   support-auth-e2e:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_support_e2e == true }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_support_e2e == true) || (github.event_name == 'push' && github.ref == 'refs/heads/integration/app-scaffold-audit') }}
     needs: verify
     runs-on: ubuntu-latest
     environment: staging
