@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createHash, createHmac } from "node:crypto";
 import { verifyFairRound } from "./fairness";
+import type { FairOutcome } from "./fairness";
 
-function reference(seed: string, clientSeed: string, nonce: number, game: "dice" | "coin" | "number") {
+function reference(seed: string, clientSeed: string, nonce: number, game: "dice" | "coin" | "number"): FairOutcome {
   const values: number[] = [];
   let counter = 0;
   while (values.length < (game === "dice" ? 2 : 1)) {
@@ -12,7 +13,7 @@ function reference(seed: string, clientSeed: string, nonce: number, game: "dice"
       if (n < 4294967292) values.push(n % 6 + 1);
     }
   }
-  return game === "dice" ? { dice: values, sum: values[0] + values[1] } : game === "coin" ? { coin: values[0] % 2 ? "heads" : "tails" } : { number: values[0] };
+  return game === "dice" ? { dice: values, sum: values[0] + values[1] } : game === "coin" ? { coin: values[0] % 2 ? "heads" as const : "tails" as const } : { number: values[0] };
 }
 describe("provably fair verifier", () => {
   const serverSeed = "0123456789abcdef".repeat(4);
