@@ -9,7 +9,7 @@ const replace = (before, after) => {
 
 replace(
   "import ExclusionBanner from './components/casino/ExclusionBanner';",
-  "import ExclusionBanner from './components/casino/ExclusionBanner';\nimport SupabaseSignIn from './components/SupabaseSignIn';"
+  "import ExclusionBanner from './components/casino/ExclusionBanner';\nimport SupabaseSignIn from './components/SupabaseSignIn';\nimport CryptoDepositNetworksPreview from './components/casino/CryptoDepositNetworksPreview';"
 );
 replace(
   ".catch(() => setStatus('ok'));",
@@ -40,9 +40,10 @@ replace(
   const approvedRoutes = new Set([
     '/', '/Home', '/Profile', '/TransactionHistory', '/PrivacyPolicy',
     '/TermsOfService', '/CookiesPolicy', '/ResponsiblePlay',
-    '/FairnessManifesto', '/Licensing',
+    '/FairnessManifesto', '/Licensing', '/DepositNetworks',
   ]);
   const currentRoute = window.location.pathname.replace(/\\/+$/, '') || '/';
+  if (currentRoute === '/DepositNetworks') return <CryptoDepositNetworksPreview />;
   if (!approvedRoutes.has(currentRoute)) return <main role="alert" style={{padding:32}}>
     <h1>Imperial Games migration preview</h1>
     <p>This page is disabled until its operations have been migrated and verified in Supabase.</p>
