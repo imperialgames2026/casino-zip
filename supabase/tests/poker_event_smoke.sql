@@ -2,7 +2,7 @@
 -- Requires two existing auth.users accounts in this staging project.
 BEGIN;
 DO $test$
-DECLARE users uuid[];ev uuid;v_table uuid;owner_id uuid;reply jsonb;deck jsonb;seed text;commitment text;actor uuid;action_id uuid;button_before integer;total bigint;
+DECLARE users uuid[];ev uuid;v_table uuid;v_owner uuid;reply jsonb;deck jsonb;seed text;commitment text;actor uuid;action_id uuid;button_before integer;total bigint;
 BEGIN
  IF has_function_privilege('authenticated','public.poker_event_start_v1(uuid,uuid,bigint,uuid)','EXECUTE') THEN
   RAISE EXCEPTION 'AUTHENTICATED_ROLE_HAS_INTERNAL_EVENT_START_PERMISSION';
@@ -18,12 +18,12 @@ BEGIN
  PERFORM public.poker_event_register_v1(ev,users[2]);
  reply=public.poker_event_start_v1(ev,users[1],1,gen_random_uuid());
  IF (reply->>'tables')::int<>1 OR (reply->>'players')::int<>2 THEN RAISE EXCEPTION 'WRONG_EVENT_START %',reply;END IF;
- SELECT id,owner_id INTO v_table,owner_id FROM public.poker_tables_v1 WHERE event_id=ev;
+ SELECT id,owner_id INTO v_table,v_owner FROM public.poker_tables_v1 WHERE event_id=ev;
  SELECT jsonb_agg(jsonb_build_object('rank',rank,'suit',suit) ORDER BY suit,rank)
  INTO deck FROM unnest(array['c','d','h','s']) suit CROSS JOIN generate_series(2,14) rank;
  seed=repeat('a',32);
  commitment=encode(extensions.digest(seed||':'||v_table::text||':1','sha256'),'hex');
- PERFORM public.poker_start_v2(v_table,owner_id,deck,commitment,seed,1);
+ PERFORM public.poker_start_v2(v_table,v_owner,deck,commitment,seed,1);
  SELECT button INTO button_before FROM public.poker_tables_v1 WHERE id=v_table;
  SELECT user_id INTO actor FROM public.poker_seats_v1
  WHERE table_id=v_table AND seat_no=(SELECT turn_index FROM public.poker_tables_v1 WHERE id=v_table);
@@ -33,7 +33,7 @@ BEGIN
  SELECT sum(stack+committed) INTO total FROM public.poker_seats_v1 WHERE table_id=v_table;
  IF total<>2000 THEN RAISE EXCEPTION 'CHIP_CONSERVATION_FAILED';END IF;
  seed=repeat('b',32);commitment=encode(extensions.digest(seed||':'||v_table::text||':2','sha256'),'hex');
- PERFORM public.poker_start_v2(v_table,owner_id,deck,commitment,seed,2);
+ PERFORM public.poker_start_v2(v_table,v_owner,deck,commitment,seed,2);
  IF (SELECT button FROM public.poker_tables_v1 WHERE id=v_table)=button_before THEN RAISE EXCEPTION 'BUTTON_DID_NOT_ROTATE';END IF;
 END $test$;
 ROLLBACK;
