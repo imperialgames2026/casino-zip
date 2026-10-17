@@ -55,6 +55,15 @@ jobs:
       - name: Build original application
         working-directory: ${{ runner.temp }}/imperial-legacy
         run: npm run build
+      - name: Inventory all original Base44 functions and entity operations
+        run: node scripts/audit-base44-legacy.mjs "$RUNNER_TEMP/imperial-legacy" "$RUNNER_TEMP/legacy-functions-inventory.json"
+      - name: Save complete legacy migration inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: imperial-legacy-function-inventory
+          path: ${{ runner.temp }}/legacy-functions-inventory.json
+          if-no-files-found: error
+          retention-days: 7
 
 
   migrated-legacy-preview:
