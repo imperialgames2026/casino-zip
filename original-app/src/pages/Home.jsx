@@ -8,7 +8,7 @@ import { motion } from 'framer-motion';
 import { Sparkles, Star, TrendingUp, Users, ChevronRight, Zap, Smartphone, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import GameCard from '@/components/casino/GameCard';
-import LiveBetFeed from '@/components/casino/LiveBetFeed';
+// Legacy Base44 live wager feed is intentionally disabled in migration preview.
 import WalletDisplay from '@/components/casino/WalletDisplay';
 import DailyReward from '@/components/casino/DailyReward';
 import BonusActivator from '@/components/casino/BonusActivator';
@@ -331,7 +331,7 @@ export default function Home() {
 
       {/* Live Bet Feed - Full Width Bottom */}
       <div className="max-w-7xl mx-auto px-4 pb-16">
-        <LiveBetFeed />
+        <p role="status" className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-gray-300">Live wagers are unavailable during secure Supabase migration. Practice games do not move funds.</p>
       </div>
 
       {/* Information Section */}
