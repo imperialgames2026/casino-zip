@@ -4,7 +4,7 @@ const HEADERS = {
   "content-type": "application/json",
   "cache-control": "no-store",
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "authorization, apikey, content-type",
+  "access-control-allow-headers": "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
   "access-control-allow-methods": "POST, OPTIONS",
 };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: HEADERS });
