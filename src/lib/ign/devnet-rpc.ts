@@ -38,7 +38,9 @@ export async function getIgnMintSnapshot(signal?: AbortSignal): Promise<MintSnap
     { encoding: "jsonParsed", commitment: "confirmed" },
   ], signal);
   const info = result.value?.data?.parsed?.info;
-  if (!info || result.value?.owner !== IGN_DEVNET.tokenProgram || typeof info.supply !== "string" || !/^\d+$/.test(info.supply) || info.decimals !== IGN_DEVNET.decimals ||\n      !Object.prototype.hasOwnProperty.call(info, "mintAuthority") ||\n      !Object.prototype.hasOwnProperty.call(info, "freezeAuthority")) {
+  if (!info || result.value?.owner !== IGN_DEVNET.tokenProgram || typeof info.supply !== "string" || !/^\d+$/.test(info.supply) || info.decimals !== IGN_DEVNET.decimals ||
+      !Object.prototype.hasOwnProperty.call(info, "mintAuthority") ||
+      !Object.prototype.hasOwnProperty.call(info, "freezeAuthority")) {
     throw new Error("IGN Devnet mint could not be verified");
   }
   return {
