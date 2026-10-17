@@ -18,7 +18,7 @@ Copy `.env.example` to `.env.local` and fill in the Supabase project URL and pub
 
 ## Scope and security
 
-The app currently provides a demo lobby, games, and authentication UI. It is **not** a real-money casino, and no payment, redeemable wallet, game settlement, admin authorization, or blockchain operations are implemented. All game outcomes are client-side demonstrations and must never be used for financial settlement. The demo randomness is not certified or uniformly sampled for gambling use.
+The app currently provides a demo lobby, games, and authentication UI. It is **not** a real-money casino, and no real-value payment, redeemable wallet, game settlement, or privileged blockchain transactions are implemented. Read-only IGN Devnet token inspection and a Superadmin role-gated planning dashboard have been added on the integration branch. All game outcomes are client-side demonstrations and must never be used for financial settlement. The demo randomness is not certified or uniformly sampled for gambling use.
 
 Before production launch: add server-authoritative game settlement and an immutable double-entry ledger, database RLS policies and role checks, idempotent payment processing, identity/compliance controls, end-to-end tests, monitoring, deployment configuration, and independent security review.
 
