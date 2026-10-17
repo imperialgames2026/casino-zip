@@ -10,7 +10,14 @@ export default function CryptoDepositNetworksPreview() {
   const [status, setStatus] = useState('Checking staging network catalog…');
   useEffect(() => {
     let active = true;
-    requireSupabase().functions.invoke('crypto-deposit-preview-v1', { body: { action: 'catalog' } })
+    let client;
+    try {
+      client = requireSupabase();
+    } catch {
+      setStatus('Staging configuration unavailable. No deposits accepted.');
+      return () => { active = false; };
+    }
+    void client.functions.invoke('crypto-deposit-preview-v1', { body: { action: 'catalog' } })
       .then(({ data, error }) => {
         if (!active) return;
         const valid = !error && data?.acceptsDeposits === false &&
