@@ -16,6 +16,11 @@ on:
         type: boolean
         required: false
         default: false
+      run_support_e2e:
+        description: 'Run isolated staging support ticket integration checks'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
