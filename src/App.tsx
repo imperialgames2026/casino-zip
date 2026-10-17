@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
+import { verifyFairRound } from "./lib/fairness";
 
 type Page = "Lobby" | "Games" | "Wallet" | "Account";
 const games = [
@@ -75,10 +76,10 @@ export default function App() {
       setFairProof("Committed hash: " + committed.server_seed_hash);
       const { data: revealed, error: revealError } = await supabase.functions.invoke("provably-fair-demo", { body: { action: "reveal", roundId: committed.id } });
       if (revealError || !revealed?.serverSeed) throw revealError ?? new Error("Reveal failed");
-      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(revealed.serverSeed));
-      const calculatedHash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
-      if (calculatedHash !== committed.server_seed_hash) throw new Error("Server seed hash verification failed");
-      setFairProof("Verified SHA-256 commitment: " + calculatedHash + " | Round: " + revealed.roundId + " | Client seed: " + revealed.clientSeed + " | Server seed: " + revealed.serverSeed);
+      if (revealed.roundId !== committed.id || revealed.game !== activeGame || revealed.clientSeed !== clientSeed || revealed.nonce !== committed.nonce || revealed.serverSeedHash !== committed.server_seed_hash) throw new Error("Round commitment mismatch");
+      const verified = await verifyFairRound({ game: activeGame, serverSeed: revealed.serverSeed, clientSeed, nonce: revealed.nonce, serverSeedHash: committed.server_seed_hash, outcome: revealed.outcome });
+      if (!verified) throw new Error("Provably fair result verification failed");
+      setFairProof("Verified SHA-256 commitment and HMAC outcome: " + committed.server_seed_hash + " | Round: " + revealed.roundId + " | Client seed: " + revealed.clientSeed + " | Server seed: " + revealed.serverSeed);
       setResult("Server result: " + JSON.stringify(revealed.outcome));
       setRounds(v => v + 1);
     } catch (error) { setResult(error instanceof Error ? error.message : "Unable to play server round"); }
