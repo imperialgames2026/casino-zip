@@ -8,6 +8,8 @@ import PokerTournamentBuilder from "./components/PokerTournamentBuilder";
 import PokerOnlineLobby from "./components/PokerOnlineLobby";
 import IGNWalletPanel from "./components/IGNWalletPanel";
 import IGNTreasuryPanel from "./components/IGNTreasuryPanel";
+import ProfileNameOnce from "./components/ProfileNameOnce";
+import KYCVerificationPanel from "./components/KYCVerificationPanel";
 
 type Page = "Lobby" | "Games" | "Wallet" | "Account" | "Admin";
 const games = [
@@ -144,7 +146,7 @@ export default function App() {
       {page === "Admin" && session && <IGNTreasuryPanel key={session.user.id} userId={session.user.id} />}
       {page === "Wallet" && <section><h1>Wallet</h1><IGNWalletPanel /><div style={{ ...panelStyle, marginTop: 22 }}><h2>Practice funds are separate</h2><p>IGN is a public Solana Devnet token displayed in read-only mode. The application does not custody your IGN, accept token deposits, issue rewards, process withdrawals, or settle game outcomes with tokens.</p><p>IGD, IGT, GC/SC, and practice chips are separate currencies or accounting concepts. No real-value transactions are enabled.</p></div></section>}
       {page === "Account" && <section><h1>Account</h1><div style={{ ...panelStyle, maxWidth: 520 }}>
-        {session ? <><p>Signed in as <strong>{session.user.email ?? session.user.id}</strong></p><button style={buttonStyle} onClick={async () => { const { error } = await supabase!.auth.signOut(); setNotice(error?.message ?? "Signed out."); }}>Sign out</button></> :
+        {session ? <><p>Signed in as <strong>{session.user.email ?? session.user.id}</strong></p><button style={buttonStyle} onClick={async () => { const { error } = await supabase!.auth.signOut(); setNotice(error?.message ?? "Signed out."); }}>Sign out</button><ProfileNameOnce key={`name-${session.user.id}`} userId={session.user.id}/><KYCVerificationPanel key={`kyc-${session.user.id}`} userId={session.user.id}/></> :
           <><h2>{authMode === "signin" ? "Sign in" : authMode === "signup" ? "Create account" : "Reset password"}</h2><form onSubmit={authenticate}>
             <label>Email<input required type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle}/></label>
             {authMode !== "reset" && <label>Password<input required minLength={6} type="password" autoComplete={authMode === "signin" ? "current-password" : "new-password"} value={password} onChange={e => setPassword(e.target.value)} style={inputStyle}/></label>}
