@@ -16,6 +16,7 @@ export function applyPokerAction(table:Table,seatId:string,action:Action,expecte
  else if(action.type==="check"){if(toCall!==0)throw Error("Cannot check facing a bet");}
  else if(action.type==="call")contribution=Math.min(toCall,seat.stack);
  else if(action.type==="bet"||action.type==="raise"){
+  if(!raiseAllowed)throw Error("Betting not reopened by short all-in");
   const target=action.amount;
   if(!valid(target!)||target!<=t.currentBet)throw Error("Invalid bet target");
   if(action.type==="bet"&&t.currentBet!==0)throw Error("Bet requires unopened street");
