@@ -83,15 +83,20 @@ const AuthenticatedApp = () => {
 
   if (authError && authError.type !== 'auth_required') return <main role="alert" style={{padding:32}}>Account verification unavailable: {authError.message}</main>;
   if (!isAuthenticated) return <SupabaseSignIn />;
-  if (user?.is_excluded) return <ExclusionBanner />;
+  const currentRoute = routeLocation.pathname.replace(/\/+$/, '') || '/';
+  // Even excluded users can submit a support request or appeal a restriction.
+  if (user?.is_excluded && currentRoute !== '/Support') return <ExclusionBanner />;
   // Server-side functions also deny gameplay mutations. The migration preview
   // must not expose old client-authoritative wagering or identity collection.
   const approvedRoutes = new Set([
     '/', '/Home', '/Profile', '/TransactionHistory', '/PrivacyPolicy',
     '/TermsOfService', '/CookiesPolicy', '/ResponsiblePlay',
     '/FairnessManifesto', '/Licensing', '/DepositNetworks',
+    '/Support', '/AdminSupport',
   ]);
-  const currentRoute = routeLocation.pathname.replace(/\/+$/, '') || '/';
+  if (currentRoute === '/AdminSupport' && !['admin', 'superadmin'].includes(user?.role)) {
+    return <main role="alert" style={{padding:32}}>Admin or Superadmin authorization required.</main>;
+  }
   if (currentRoute === '/DepositNetworks') return <CryptoDepositNetworksPreview />;
   if (!approvedRoutes.has(currentRoute)) return <main role="alert" style={{padding:32}}>
     <h1>Imperial Games migration preview</h1>
