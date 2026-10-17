@@ -6,6 +6,8 @@ import { verifyFairRound } from "./lib/fairness";
 import TableGamesPreview from "./components/TableGamesPreview";
 import PokerTournamentBuilder from "./components/PokerTournamentBuilder";
 import PokerOnlineLobby from "./components/PokerOnlineLobby";
+import IGNWalletPanel from "./components/IGNWalletPanel";
+import IGNTreasuryPanel from "./components/IGNTreasuryPanel";
 
 type Page = "Lobby" | "Games" | "Wallet" | "Account" | "Admin";
 const games = [
@@ -139,7 +141,8 @@ export default function App() {
         {adminResult && <p role="status" aria-live="polite">{adminResult}</p>}
       </div></section>}
       {page === "Admin" && session && <PokerTournamentBuilder />}
-      {page === "Wallet" && <section><h1>Wallet</h1><div style={panelStyle}><h2>Financial transactions unavailable</h2><p>This demo does not issue tokens, store a financial balance, accept deposits, process withdrawals, or provide payouts.</p><p>Secure ledger and payment workflows must be independently implemented and tested before activation.</p></div></section>}
+      {page === "Admin" && session && <IGNTreasuryPanel key={session.user.id} userId={session.user.id} />}
+      {page === "Wallet" && <section><h1>Wallet</h1><IGNWalletPanel /><div style={{ ...panelStyle, marginTop: 22 }}><h2>Practice funds are separate</h2><p>IGN is a public Solana Devnet token displayed in read-only mode. The application does not custody your IGN, accept token deposits, issue rewards, process withdrawals, or settle game outcomes with tokens.</p><p>IGD, IGT, GC/SC, and practice chips are separate currencies or accounting concepts. No real-value transactions are enabled.</p></div></section>}
       {page === "Account" && <section><h1>Account</h1><div style={{ ...panelStyle, maxWidth: 520 }}>
         {session ? <><p>Signed in as <strong>{session.user.email ?? session.user.id}</strong></p><button style={buttonStyle} onClick={async () => { const { error } = await supabase!.auth.signOut(); setNotice(error?.message ?? "Signed out."); }}>Sign out</button></> :
           <><h2>{authMode === "signin" ? "Sign in" : authMode === "signup" ? "Create account" : "Reset password"}</h2><form onSubmit={authenticate}>
