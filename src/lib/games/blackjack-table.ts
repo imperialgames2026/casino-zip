@@ -3,7 +3,7 @@ export type BJSeat={id:string;cards:BlackjackCard[];bet:number;status:"playing"|
 export type BJTable={phase:"betting"|"players"|"dealer"|"settled";shoe:BlackjackCard[];cursor:number;dealer:BlackjackCard[];seats:BJSeat[];turn:number;revision:number;hitSoft17:boolean};
 const draw=(t:BJTable)=>{if(t.cursor>=t.shoe.length)throw Error("Shoe exhausted");return t.shoe[t.cursor++];};
 export function beginBlackjack(seats:{id:string;bet:number}[],shoe:BlackjackCard[],hitSoft17=false):BJTable{
- if(!seats.length||seats.length>7||seats.some(s=>!Number.isSafeInteger(s.bet)||s.bet<=0)||new Set(seats.map(s=>s.id)).size!==seats.length)throw Error("Invalid seats");
+ if(!seats.length||seats.length>7||seats.some(s=>!Number.isSafeInteger(s.bet)||s.bet<=0||s.bet%2!==0)||new Set(seats.map(s=>s.id)).size!==seats.length)throw Error("Invalid seats");
  if(shoe.some(c=>!Number.isInteger(c.rank)||c.rank<1||c.rank>13))throw Error("Invalid shoe");
  const t:BJTable={phase:"players",shoe:[...shoe],cursor:0,dealer:[],seats:seats.map(s=>({...s,cards:[],status:"playing"})),turn:0,revision:0,hitSoft17};
  for(let pass=0;pass<2;pass++){for(const seat of t.seats)seat.cards.push(draw(t));t.dealer.push(draw(t));}
