@@ -4,7 +4,7 @@ const respond = (body: unknown, status = 200) => new Response(JSON.stringify(bod
   status, headers: {
     "content-type": "application/json", "cache-control": "no-store",
     "access-control-allow-origin": "*",
-    "access-control-allow-headers": "authorization, apikey, content-type",
+    "access-control-allow-headers": "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
   },
 });
 const ROLES = new Set(["player", "tester", "admin", "superadmin"]);
