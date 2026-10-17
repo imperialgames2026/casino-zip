@@ -6,7 +6,7 @@ const json = (value: unknown, status = 200) => new Response(JSON.stringify(value
     "content-type": "application/json",
     "cache-control": "no-store",
     "access-control-allow-origin": "*",
-    "access-control-allow-headers": "authorization, apikey, content-type",
+    "access-control-allow-headers": "authorization, apikey, content-type, x-client-info, x-supabase-api-version",
   },
 });
 const allowed = new Set(["player", "tester", "admin", "superadmin"]);
