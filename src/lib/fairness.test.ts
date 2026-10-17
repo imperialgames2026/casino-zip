@@ -28,6 +28,18 @@ describe("provably fair verifier", () => {
       expect(await verifyFairRound({ game, serverSeed, clientSeed, nonce: 4, serverSeedHash, outcome: { number: 999 } })).toBe(false);
     });
   }
+  it("verifies the same dice values after JSONB reorders object keys on replay", async () => {
+    const expected = reference(serverSeed, clientSeed, 4, "dice");
+    if (!("dice" in expected)) throw Error("Dice reference was not generated");
+    const reordered = { sum: expected.sum, dice: expected.dice };
+    expect(await verifyFairRound({ game: "dice", serverSeed, clientSeed, nonce: 4, serverSeedHash, outcome: reordered })).toBe(true);
+    expect(await verifyFairRound({ game: "dice", serverSeed, clientSeed, nonce: 4, serverSeedHash, outcome: { sum: expected.sum + 1, dice: expected.dice } })).toBe(false);
+  });
+  it("does not allow added fields on verified outcomes", async () => {
+    const expected = reference(serverSeed, clientSeed, 4, "coin");
+    const tampered = { ...expected, paidOut: true };
+    expect(await verifyFairRound({ game: "coin", serverSeed, clientSeed, nonce: 4, serverSeedHash, outcome: tampered })).toBe(false);
+  });
   it("rejects incorrect commitment", async () => {
     expect(await verifyFairRound({ game: "number", serverSeed, clientSeed, nonce: 4, serverSeedHash: "0".repeat(64), outcome: reference(serverSeed, clientSeed, 4, "number") })).toBe(false);
   });
