@@ -31,6 +31,39 @@ jobs:
       - run: npm run build
       - run: npm run test
 
+
+  original-app-source-build:
+    # The casino is now editable in source control, rather than extracted only
+    # from a Base44 ZIP. Do NOT deploy this until real feature E2E gates pass.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate editable original casino and blocked legacy SDK imports
+        run: |
+          test -f original-app/src/App.jsx
+          test -f original-app/src/api/base44Client.js
+          test -f original-app/package-lock.json
+          if grep -R -nE "from ['\"]@base44|npm:@base44" original-app/src --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx'; then
+            echo "Base44 runtime SDK imports remain"; exit 1
+          fi
+      - name: Install locked migrated original dependencies
+        working-directory: original-app
+        run: npm ci --no-audit --no-fund
+      - name: Build migrated original casino from first-class source
+        working-directory: original-app
+        run: npm run build
+      - name: Save original casino preview for QA only
+        uses: actions/upload-artifact@v4
+        with:
+          name: imperial-original-app-source-dist
+          path: original-app/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+
   legacy-archive-build:
     # The original 390-entry app is still in ig-games.zip; this job MUST catch
     # failures before anyone tries to replace it with the small React scaffold.
