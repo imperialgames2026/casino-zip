@@ -16,6 +16,7 @@ const shorten = (value: string) => `${value.slice(0, 7)}…${value.slice(-7)}`;
 export default function IGNWalletPanel() {
   const [address, setAddress] = useState("");
   const [selected, setSelected] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [token, setToken] = useState<OwnerSnapshot | null>(null);
@@ -39,7 +40,7 @@ export default function IGNWalletPanel() {
       .catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "Unable to read wallet"); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [selected]);
+  }, [selected, refreshKey]);
 
   async function connectPhantom() {
     const candidate = (window as Window & { phantom?: { solana?: Phantom }; solana?: Phantom }).phantom?.solana
@@ -55,6 +56,7 @@ export default function IGNWalletPanel() {
       if (!isSolanaPublicKey(publicAddress)) throw new Error("Wallet returned an invalid public address");
       setAddress(publicAddress);
       setSelected(publicAddress);
+      setRefreshKey(value => value + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Wallet connection cancelled");
     }
@@ -83,7 +85,7 @@ export default function IGNWalletPanel() {
       <button style={btn} type="button" onClick={() => void connectPhantom()}>Connect Phantom (view only)</button>
       <a href={IGN_DEVNET.explorer} target="_blank" rel="noopener noreferrer" style={{ ...btn, background: "transparent", color: "#EBCB7C", textDecoration: "none" }}>View token on explorer ↗</a>
     </div>
-    <form onSubmit={event => { event.preventDefault(); const value = address.trim(); if (!isSolanaPublicKey(value)) { setError("Enter a valid Solana public address"); return; } setError(""); if (value === selected) { setSelected(""); queueMicrotask(() => setSelected(value)); } else setSelected(value); }}>
+    <form onSubmit={event => { event.preventDefault(); const value = address.trim(); if (!isSolanaPublicKey(value)) { setError("Enter a valid Solana public address"); return; } setError(""); setSelected(value); setRefreshKey(current => current + 1); }}>
       <label htmlFor="ign-watch-address" style={{ color: "#E6DFE7", display: "block", marginBottom: 6 }}>Look up an address (no wallet connection required)</label>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         <input id="ign-watch-address" value={address} autoComplete="off" spellCheck={false} onChange={e => setAddress(e.target.value)}
