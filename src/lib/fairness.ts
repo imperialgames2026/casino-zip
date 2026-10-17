@@ -25,10 +25,22 @@ export async function verifyFairRound(input: {
       if (n < 4294967292) numbers.push(n % 6 + 1);
     }
   }
-  const expected: FairOutcome = input.game === "dice"
-    ? { dice: numbers, sum: numbers[0] + numbers[1] }
-    : input.game === "coin"
-      ? { coin: numbers[0] % 2 ? "heads" : "tails" }
-      : { number: numbers[0] };
-  return JSON.stringify(expected) === JSON.stringify(input.outcome);
+  // JSONB normalizes object-key ordering. Compare typed outcome values rather
+  // than serialized JSON: an idempotent replay must verify exactly as the first reveal.
+  const received: unknown = input.outcome;
+  if (!received || typeof received !== "object" || Array.isArray(received)) return false;
+  const keys = Object.keys(received);
+  if (input.game === "dice") {
+    if (keys.length !== 2 || !keys.includes("dice") || !keys.includes("sum")) return false;
+    const value = received as { dice?: unknown; sum?: unknown };
+    return Array.isArray(value.dice) && value.dice.length === 2
+      && value.dice[0] === numbers[0] && value.dice[1] === numbers[1]
+      && value.sum === numbers[0] + numbers[1];
+  }
+  if (input.game === "coin") {
+    return keys.length === 1 && keys[0] === "coin"
+      && (received as { coin?: unknown }).coin === (numbers[0] % 2 ? "heads" : "tails");
+  }
+  return input.game === "number" && keys.length === 1 && keys[0] === "number"
+    && (received as { number?: unknown }).number === numbers[0];
 }
