@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import { verifyFairRound } from "./lib/fairness";
 import TableGamesPreview from "./components/TableGamesPreview";
+import PokerTournamentBuilder from "./components/PokerTournamentBuilder";
 
 type Page = "Lobby" | "Games" | "Wallet" | "Account" | "Admin";
 const games = [
@@ -135,6 +136,7 @@ export default function App() {
         {!session && <p>Sign in to request generation. Only authorized admins can generate rounds.</p>}
         {adminResult && <p role="status" aria-live="polite">{adminResult}</p>}
       </div></section>}
+      {page === "Admin" && session && <PokerTournamentBuilder />}
       {page === "Wallet" && <section><h1>Wallet</h1><div style={panelStyle}><h2>Financial transactions unavailable</h2><p>This demo does not issue tokens, store a financial balance, accept deposits, process withdrawals, or provide payouts.</p><p>Secure ledger and payment workflows must be independently implemented and tested before activation.</p></div></section>}
       {page === "Account" && <section><h1>Account</h1><div style={{ ...panelStyle, maxWidth: 520 }}>
         {session ? <><p>Signed in as <strong>{session.user.email ?? session.user.id}</strong></p><button style={buttonStyle} onClick={async () => { const { error } = await supabase!.auth.signOut(); setNotice(error?.message ?? "Signed out."); }}>Sign out</button></> :
