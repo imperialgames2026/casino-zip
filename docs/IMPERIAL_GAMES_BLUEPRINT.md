@@ -1,6 +1,8 @@
 # Imperial Games — Application Blueprint
 
-## NotebookLM design references
+## Sources
+
+### NotebookLM design references
 
 These notebooks are reference inputs for future application design and implementation. Their contents have not yet been independently reviewed; do not treat them as verified specifications until exported or accessible.
 
