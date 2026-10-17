@@ -3,7 +3,7 @@ import { IGN_DEVNET } from "./asset-registry";
 /** Public RPC reads only. No key material, private wallet addresses or signing. */
 type JsonRpcResponse<T> = { result?: T; error?: { message?: string } };
 type TokenAccount = { account?: { data?: { parsed?: { info?: { tokenAmount?: { amount?: string; decimals?: number }; mint?: string } } } } };
-type AccountInfo = { value: { data?: { parsed?: { info?: { mintAuthority?: string | null; freezeAuthority?: string | null; decimals?: number; supply?: string } } } } | null };
+type AccountInfo = { value: { owner?: string; data?: { parsed?: { info?: { mintAuthority?: string | null; freezeAuthority?: string | null; decimals?: number; supply?: string } } } } | null };
 export type MintSnapshot = { supplyAtomic: bigint; mintAuthority: string | null; freezeAuthority: string | null; slot: number };
 export type OwnerSnapshot = { amountAtomic: bigint; accounts: number; slot: number };
 
@@ -38,7 +38,7 @@ export async function getIgnMintSnapshot(signal?: AbortSignal): Promise<MintSnap
     { encoding: "jsonParsed", commitment: "confirmed" },
   ], signal);
   const info = result.value?.data?.parsed?.info;
-  if (!info || typeof info.supply !== "string" || info.decimals !== IGN_DEVNET.decimals) {
+  if (!info || result.value?.owner !== IGN_DEVNET.tokenProgram || typeof info.supply !== "string" || !/^\\d+$/.test(info.supply) || info.decimals !== IGN_DEVNET.decimals) {
     throw new Error("IGN Devnet mint could not be verified");
   }
   return {
