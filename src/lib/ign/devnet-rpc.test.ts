@@ -18,7 +18,7 @@ describe("read-only Solana Devnet queries", () => {
   it("queries a Devnet mint and accurately parses a 10B fixed supply", async () => {
     const fetchMock = vi.fn().mockResolvedValue(response({
       context: { slot: 123 },
-      value: { data: { parsed: { info: { decimals: 9, supply: "10000000000000000000", mintAuthority: null, freezeAuthority: null } } } },
+      value: { owner: IGN_DEVNET.tokenProgram, data: { parsed: { info: { decimals: 9, supply: "10000000000000000000", mintAuthority: null, freezeAuthority: null } } } },
     }));
     vi.stubGlobal("fetch", fetchMock);
     const mint = await getIgnMintSnapshot();
