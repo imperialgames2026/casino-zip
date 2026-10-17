@@ -61,3 +61,9 @@ if (functions.length < 50) throw new Error("Archive function inventory unexpecte
 writeFileSync(output, JSON.stringify(result, null, 2) + "\n");
 console.log("Audited", functions.length, "legacy Base44 backend functions;", [...entityCalls.values()].reduce((a,b)=>a+b,0), "entity call sites;");
 console.log("Unmapped frontend invocation names:", unmappedCalls.length);
+console.log("LEGACY_FUNCTION_INVENTORY_BEGIN");
+for (const entry of functions) {
+  console.log([entry.category,entry.legacy_name,entry.frontend_calls,entry.implemented].join(" | "));
+}
+console.log("LEGACY_FUNCTION_INVENTORY_END");
+console.log("LEGACY_UNMAPPED_FRONTEND_INVOKES",JSON.stringify(unmappedCalls));
