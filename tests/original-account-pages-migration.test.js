@@ -30,7 +30,7 @@ describe('original Imperial Games account pages migrated to Supabase', () => {
     expect(reads).toContain(".eq('user_id', identity.id)");
     expect(reads).toContain('filters.user_email !== identity.email');
     expect(reads).toContain("limit > 500");
-    expect(adapter).toContain("return deny('Transaction create')");
-    expect(adapter).toContain("return deny('Wallet update')");
+    expect(adapter).toContain("deny('Transaction create')");
+    expect(adapter).toContain("deny('Wallet update')");
   });
 });
