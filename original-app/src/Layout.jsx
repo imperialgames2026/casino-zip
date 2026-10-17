@@ -24,7 +24,7 @@ import MobileHeader from '@/components/mobile/MobileHeader';
 import PageTransition from '@/components/mobile/PageTransition';
 import SupportChatWidget from '@/components/support/SupportChatWidget';
 import KYCPrompt from '@/components/casino/KYCPrompt';
-import GlobalChat from '@/components/chat/GlobalChat';
+// Legacy Base44 GlobalChat subscription disabled until migrated to Supabase.
 
 function useMediaQuery(query) {
   const [matches, setMatches] = useState(false);
@@ -115,7 +115,7 @@ export default function Layout({ children, currentPageName }) {
       <MobileHeader />
       <SupportChatWidget user={user} />
       <KYCPrompt />
-      <GlobalChat user={user} />
+      {/* Real-time global chat is disabled until Supabase moderation and subscriptions are verified. */}
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0A0612]/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 hidden md:block">
         <div className="max-w-7xl mx-auto px-4">
