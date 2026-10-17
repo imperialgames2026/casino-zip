@@ -1,21 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Users, Play, ExternalLink } from 'lucide-react';
+import { Users, Play, ExternalLink, Dices } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 
 
 export default function GameCard({ game }) {
-  const coverOverrides = {
-    crash: 'https://media.base44.com/images/public/697dc67abbb768c5bbbab5d5/9d772a3ad_5ecb075cb_generated_image.png',
-    roulette: 'https://media.base44.com/images/public/697dc67abbb768c5bbbab5d5/f33ce3a2c_23f1e3255_generated_image.png',
-    poker: 'https://media.base44.com/images/public/697dc67abbb768c5bbbab5d5/36d91d867_9cac380a4_generated_image.png',
-    blackjack: 'https://media.base44.com/images/public/697dc67abbb768c5bbbab5d5/e9f3a1bcd_6ffad54bb_generated_image1.png',
-    hilo: 'https://media.base44.com/images/public/697dc67abbb768c5bbbab5d5/73fa250c4_6031281b4_generated_image.png',
-    farmageddon: 'https://media.base44.com/images/public/697dc67abbb768c5bbbab5d5/f6183d23a_d1b890d74_generated_image.png',
-  };
-
   // Convert slug to PascalCase for page name (e.g., "lucky-fortune" -> "LuckyFortune")
   const toPascalCase = (slug) => {
     return slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join('');
@@ -75,11 +66,10 @@ export default function GameCard({ game }) {
         <div className="relative group overflow-hidden rounded-2xl bg-gradient-to-br from-[#1A1528] to-[#0F0A1E] border border-white/10 hover:border-pink-500/50 transition-all duration-300">
           {/* Image */}
           <div className="relative h-48 overflow-hidden">
-            <img 
-              src={coverOverrides[game.slug] || game.image_url || `https://images.unsplash.com/photo-1596838132731-3301c3fd4317?w=400`}
-              alt={game.name}
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#48224f] via-[#2b1754] to-[#171134]">
+              <Dices aria-hidden="true" className="h-16 w-16 text-pink-200 drop-shadow-xl"/>
+              <span className="text-sm uppercase tracking-widest font-bold text-amber-200">Server verified · Practice only</span>
+            </div>
             <div className="absolute inset-0 bg-gradient-to-t from-[#0F0A1E] via-transparent to-transparent" />
             
 
