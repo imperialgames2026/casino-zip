@@ -72,6 +72,12 @@ Deno.serve(async(req)=>{
   }
   const {data:membership,error:memberError}=await db.from("poker_seats_v1").select("seat_no").eq("table_id",tableId).eq("user_id",user.id).maybeSingle();
   if(memberError||!membership)return json({error:"Not seated"},403);
+  // Expired turns are settled under the same Postgres table-row lock as player actions.
+  // This is also safe for concurrent client polls and reloads.
+  if(["snapshot","act","buyTime","tick"].includes(action)){
+   const {error:timeoutError}=await db.rpc("poker_timeout_turn_v1",{p_table:tableId});
+   if(timeoutError)throw timeoutError;
+  }
   const {data:table,error:tableError}=await db.from("poker_tables_v1").select("*").eq("id",tableId).single();
   if(tableError||!table)return json({error:"Table unavailable"},404);
   if(action==="start"){
@@ -87,9 +93,20 @@ Deno.serve(async(req)=>{
   }
   if(action==="act"){
    if(typeof body.actionId!=="string"||!/^[0-9a-f-]{36}$/i.test(body.actionId)||!Number.isSafeInteger(body.version))return json({error:"Missing action ID or version"},400);
-   const {data,error}=await db.rpc("poker_action_v1",{p_table:tableId,p_actor:user.id,p_action_id:body.actionId,p_version:body.version,p_action:body.move,p_amount:body.amount??0});
+   const {data,error}=await db.rpc("poker_action_v3",{p_table:tableId,p_actor:user.id,p_action_id:body.actionId,p_version:body.version,p_action:body.move,p_amount:body.amount??0,p_system_timeout:false});
    if(error)throw error;
    return json(data);
+  }
+  if(action==="buyTime"){
+   if(typeof body.requestId!=="string"||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(body.requestId)||!Number.isSafeInteger(body.version)||!["PRACTICE","IGD","IGN"].includes(body.currency))
+    return json({error:"Invalid time extension request"},400);
+   const {data,error}=await db.rpc("poker_buy_time_v1",{p_table:tableId,p_actor:user.id,p_request:body.requestId,p_version:body.version,p_currency:body.currency});
+   if(error)throw error;
+   return json(data);
+  }
+  if(action==="tick"){
+   // The snapshot request refreshes the view after the server-side timeout check.
+   return json({tableId,version:table.version,turnDeadlineAt:table.turn_deadline_at,turnIndex:table.turn_index,status:table.status});
   }
   if(action==="advance"){
    if(table.status!=="showdown"||table.street==="river")return json({error:"Not advanceable"},409);
@@ -119,8 +136,14 @@ Deno.serve(async(req)=>{
    const {data:seats,error:seatsError}=await db.from("poker_seats_v1").select("seat_no,user_id,stack,committed,street_bet,folded,all_in,acted").eq("table_id",tableId).order("seat_no");
    if(seatsError)throw seatsError;
    const {data:hole}=await db.from("poker_seats_v1").select("private_hole").eq("table_id",tableId).eq("user_id",user.id).single();
-   const publicTable={id:table.id,status:table.status,version:table.version,button:table.button,turnIndex:table.turn_index,street:table.street,board:table.board,smallBlind:table.small_blind,bigBlind:table.big_blind,currentBet:table.current_bet,minRaise:table.min_raise,deckCommitment:table.deck_commitment,handNo:table.hand_no,eventId:table.event_id,ownerId:table.owner_id};
-   return json({table:publicTable,seats,holeCards:hole?.private_hole??[], ...(table.status==="complete"?{revealedSeed:table.seed_secret,verificationHandId:tableId+":"+table.hand_no}: {})});
+   const publicTable={id:table.id,status:table.status,version:table.version,button:table.button,turnIndex:table.turn_index,street:table.street,board:table.board,smallBlind:table.small_blind,bigBlind:table.big_blind,currentBet:table.current_bet,minRaise:table.min_raise,deckCommitment:table.deck_commitment,handNo:table.hand_no,eventId:table.event_id,ownerId:table.owner_id,
+    turnStartedAt:table.turn_started_at,turnDeadlineAt:table.turn_deadline_at,
+    turnExtensionUsed:table.turn_extension_used};
+   const {data:priceConfig}=await db.from("poker_timebank_prices_v1").select("igd_price,ign_price,payment_enabled,practice_preview_enabled").eq("singleton",true).maybeSingle();
+   const price={igd:priceConfig?.igd_price??"0.15",ign:priceConfig?.ign_price??null,
+    paymentEnabled:priceConfig?.payment_enabled===true,practicePreviewEnabled:priceConfig?.practice_preview_enabled===true};
+   return json({table:publicTable,seats,holeCards:hole?.private_hole??[],serverNow:new Date().toISOString(),timebank:price,
+    ...(table.status==="complete"?{revealedSeed:table.seed_secret,verificationHandId:tableId+":"+table.hand_no}: {})});
   }
   return json({error:"Unsupported action"},400);
  }catch(error){const message=error instanceof Error?error.message:"Internal error";return json({error:message},409);}
