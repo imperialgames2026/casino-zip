@@ -7,7 +7,7 @@ describe("staging Edge source must prevent tester-triggered mutations", () => {
   for (const { name, mutationMarker } of [
     { name: "poker-events-v1", mutationMarker: 'db.rpc("poker_event_register_v1"' },
     { name: "poker-table-v1", mutationMarker: 'db.rpc("poker_create_v1"' },
-    { name: "provably-fair-v2", mutationMarker: 'db.from("fair_seed_commitments")' },
+    { name: "provably-fair-v2", mutationMarker: 'if(input.action==="commit")' },
   ]) {
     it(name + " checks role from server-side user_roles before a mutation", () => {
       const source = file(name);
