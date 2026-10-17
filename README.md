@@ -29,3 +29,11 @@ Build and tests must pass in CI before considering a merge into `main`.
 ## Staging connection
 
 The browser client defaults to the Imperial Games staging Supabase project using a public publishable key. Override via `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for a different environment. Supabase Auth email confirmation and allowed redirect URLs must be configured for the deployed domain. No secret credentials are committed.
+
+## IGN Devnet Wallet and Royal Treasury (integration branch)
+
+The **Wallet** page now includes an IGN Solana Devnet read-only token viewer. Enter any Solana public address or connect a Phantom wallet to read the balance of the IGN Devnet mint. Wallet connection only retrieves a public address: no signatures, transfers, custody or linking to a Supabase identity. Devnet RPC uses `getAccountInfo` and `getTokenAccountsByOwner`; public RPC access, browser connectivity and user sessions must be tested in a deployed environment.
+
+The **Admin** page includes the **IGN Royal Treasury** read-only working allocation dashboard for authenticated **Superadmin** users. Its role check queries the canonical `public.user_roles` table through existing Supabase RLS self-read. Non-Superadmins see an access-denied message. The current dashboard reads live **mint supply only** (not any multisig wallets or allocation accounts) and uses static approved budget figures; do not interpret budget categories as chain-reconciled wallet positions.
+
+**No IGN token transactions or wallet funding flows are implemented.** Mainnet mint, market price, paid gaming, staking, deposits, and token settlement remain disabled. Tests reside under `src/lib/ign/*.test.ts`; manual staging steps are documented in `docs/blueprints/IGN_WALLET_TREASURY_STAGING_QA.md`.
