@@ -12,6 +12,9 @@ Deno.serve(async(req)=>{
  const db=createClient(url,secret,{auth:{persistSession:false}});
  const input=await req.json().catch(()=>null);
  if(!input||typeof input!=="object")return reply({error:"Invalid payload"},400);
+ const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
+ if(roleCheckError)return reply({error:"Cannot check account permission"},503);
+ if(roleRow?.role==="tester" && !["list","tables"].includes(input.action))return reply({error:"Read-only tester account"},403);
  if(input.action==="list"){
   const {data:events,error}=await db.from("poker_events_v1").select("id,name,format,status,config,version,current_level,level_started_at").in("status",["registration","running","paused","finished"]).order("created_at",{ascending:false}).limit(50);
   if(error)return reply({error:"Unable to list events"},500);
