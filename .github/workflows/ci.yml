@@ -51,6 +51,36 @@ jobs:
         working-directory: ${{ runner.temp }}/imperial-legacy
         run: npm run build
 
+
+  migrated-legacy-preview:
+    # Build preserved frontend with a separate, Supabase-only adapter overlay.
+    # Not published to Cloudflare or merged into production.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract original casino frontend
+        run: |
+          unzip -t ig-games.zip
+          mkdir -p "$RUNNER_TEMP/imperial-migrated"
+          unzip -q ig-games.zip -d "$RUNNER_TEMP/imperial-migrated"
+      - name: Install legacy locked dependencies
+        working-directory: ${{ runner.temp }}/imperial-migrated
+        run: npm ci --no-audit --no-fund
+      - name: Apply Supabase migration overlay without editing archived source
+        working-directory: ${{ runner.temp }}/imperial-migrated
+        run: |
+          cp -R "$GITHUB_WORKSPACE/migration/legacy-overlay/src/." src/
+          cp "$GITHUB_WORKSPACE/migration/legacy-overlay/vite.config.js" vite.config.js
+          node "$GITHUB_WORKSPACE/migration/legacy-overlay/patch-app.mjs"
+          npm install --no-save --no-package-lock --no-audit --no-fund '@supabase/supabase-js@^2'
+      - name: Compile preserved casino with Supabase adapter
+        working-directory: ${{ runner.temp }}/imperial-migrated
+        run: npm run build
+
+
   staging-smoke:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_staging_smoke == true }}
     needs: verify
