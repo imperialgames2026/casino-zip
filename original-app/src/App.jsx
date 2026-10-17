@@ -91,7 +91,7 @@ const AuthenticatedApp = () => {
   const approvedRoutes = new Set([
     '/', '/Home', '/Profile', '/TransactionHistory', '/PrivacyPolicy',
     '/TermsOfService', '/CookiesPolicy', '/ResponsiblePlay',
-    '/FairnessManifesto', '/Licensing', '/DepositNetworks',
+    '/FairnessManifesto', '/Licensing', '/DepositNetworks', '/ProvablyFair',
     '/Support', '/AdminSupport',
   ]);
   if (currentRoute === '/AdminSupport' && !['admin', 'superadmin'].includes(user?.role)) {
