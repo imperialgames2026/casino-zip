@@ -25,3 +25,7 @@ Before production launch: add server-authoritative game settlement and an immuta
 ## Status
 
 Build and tests must pass in CI before considering a merge into `main`.
+
+## Staging connection
+
+The browser client defaults to the Imperial Games staging Supabase project using a public publishable key. Override via `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` for a different environment. Supabase Auth email confirmation and allowed redirect URLs must be configured for the deployed domain. No secret credentials are committed.
