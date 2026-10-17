@@ -54,3 +54,23 @@ export async function readOwnTransactions(filters = {}, order = '-created_date',
       row.currency === 'IGT' ? row.igt_amount : row.cent_amount),
   }));
 }
+
+/**
+ * Only staged zero-wager games that have a reviewed server implementation
+ * are returned. This is a display list, not gameplay authorization.
+ */
+export async function readApprovedPracticeGames(filters = {}) {
+  const identity = await currentIdentity();
+  if (identity.is_excluded) throw new Error('Account ineligible for game catalog');
+  if (Object.keys(filters || {}).some(key => key !== 'is_active') ||
+      (Object.prototype.hasOwnProperty.call(filters || {}, 'is_active') && filters.is_active !== true)) {
+    return unsupportedLegacyOperation('Unapproved game catalog filter');
+  }
+  const { data, error } = await requireSupabase().from('ig_practice_game_catalog')
+    .select('slug,name,description,category,game_type,practice_only,real_wagers_enabled,is_active,play_count,route')
+    .eq('is_active', true).eq('practice_only', true).eq('real_wagers_enabled', false).limit(50);
+  if (error) throw error;
+  return (data || []).map(game => ({
+    ...game, id: game.slug, image_url: null, provider_name: null,
+  }));
+}
