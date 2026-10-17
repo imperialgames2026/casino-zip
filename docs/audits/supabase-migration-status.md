@@ -53,3 +53,15 @@ The first opt-in authenticated run reached both optional jobs:
 - Release confidence still depends on the **new** test and full CI passing after these commits, and a new explicitly requested authenticated run using the isolated Tester credentials.
 
 DO NOT store credential values in this repository, GitHub issues, or chat. Configure only through GitHub `Settings → Secrets and variables → Actions` or the `staging` environment secrets. Account used for `staging-smoke` must have non-tester gameplay permission. Manual external tests should remain staging-only.
+
+## Multichain crypto deposit request — staged foundation, NOT accepting funds
+
+The requested twelve mainnet networks (Solana, Ethereum, BNB Smart Chain, Arbitrum One, OP Mainnet, Polygon PoS, Bitcoin, Litecoin, XRP Ledger, Cardano, Monero and Zephyr) are represented in the `depositNetworks.js` plan and the staging database's `crypto_deposit_networks` catalog. Native assets plus proposed USDT/USDC on Solana and the listed EVM chains total **24 candidate network/asset combinations**. Token mints/contracts and issuer variants remain unverified.
+
+- Staging migration: `20261017233000_crypto_deposit_network_catalog.sql`, with CHECK constraints forcing all networks and assets to remain disabled and all observations to stay `not_credited`.
+- API: `crypto-deposit-preview-v1`, an authenticated, profile/role-gated read-only Supabase Edge Function for catalog and own observation views. No addresses, QR codes, payment sessions or ledger writes.
+- Original frontend: `/DepositNetworks` is a migration-preview informational page with disabled status labels. Live Cloudflare application is unchanged.
+- Automated contract/security tests and authenticated read-only staging checks cover network counts, EVM chain IDs, no enabled deposits, user scoping, and asset labels.
+- See `docs/blueprints/MULTICHAIN_CRYPTO_DEPOSITS.md` for custody, provider selection, network and token validation, monitoring, chain finality, immutable idempotent accounting, legal/compliance review and launch gates.
+
+**Release blocker:** no crypto deposit acceptance, address issuance, real-value crediting, custody, KYC/AML readiness or redemption is implemented. The app must not advertise live crypto deposit capability.
