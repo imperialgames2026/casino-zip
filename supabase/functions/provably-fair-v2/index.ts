@@ -26,6 +26,7 @@ Deno.serve(async(req)=>{
  if(eligibilityError || !eligibility || eligibility.is_excluded !== false)return respond({error:"Account ineligible for gameplay"},403);
  const {data:roleRow,error:roleCheckError}=await db.from("user_roles").select("role").eq("user_id",user.id).maybeSingle();
  if(roleCheckError)return respond({error:"Cannot check account permission"},503);
+ if(!roleRow || !["player","admin","superadmin","tester"].includes(roleRow.role))return respond({error:"Account role not authorized"},403);
  if(roleRow?.role==="tester")return respond({error:"Read-only tester account"},403);
  if(input.action==="commit"){
   if(!["dice","coin","number"].includes(String(input.game)))return respond({error:"Invalid game"},400);
