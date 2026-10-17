@@ -58,16 +58,8 @@ export default function Layout({ children, currentPageName }) {
         try {
           const u = await base44.auth.me();
           setUser(u);
-          if (u) {
-            base44.functions.invoke('initializeUserIdentity', {}).catch(() => {});
-            // Silent session tracking (IP, geo, device)
-            base44.functions.invoke('trackSession', {}).catch((error) => {
-              if (error?.response?.data?.reason === 'restricted_region' || error?.data?.reason === 'restricted_region') {
-                alert('Access is not available in Washington or Idaho.');
-                base44.auth.logout(window.location.href);
-              }
-            });
-          }
+          // Identity and eligibility are loaded by the authenticated Supabase
+          // provider. Legacy Base44 session tracking is not a compliance gate.
         } catch (e) {
           // User not logged in
         }
@@ -207,7 +199,7 @@ export default function Layout({ children, currentPageName }) {
                             <DollarSign className="w-4 h-4" />
                             Transaction History
                           </Link>
-                          {(user.role === 'admin' || user.role === 'superadmin' || user.role === 'tester') && (
+                          {(user.role === 'admin' || user.role === 'superadmin') && (
                             <>
                               <Link 
                                 to={createPageUrl('Admin')}
@@ -327,7 +319,7 @@ export default function Layout({ children, currentPageName }) {
                             Transaction History
                           </Link>
                         </DropdownMenuItem>
-                        {(user.role === 'admin' || user.role === 'superadmin' || user.role === 'tester') && (
+                        {(user.role === 'admin' || user.role === 'superadmin') && (
                           <>
                             <DropdownMenuItem asChild className="cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10">
                               <Link to={createPageUrl('Admin')} className="flex items-center gap-2">
