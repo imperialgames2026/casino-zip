@@ -42,7 +42,7 @@ function awards(seats:{seat_no:number;committed:number;folded:boolean;private_ho
 Deno.serve(async(req)=>{
  if(req.method==="OPTIONS")return json({});
  if(req.method!=="POST")return json({error:"POST required"},405);
- const jwt=req.headers.get("Authorization")?.replace(/^Bearer\\s+/i,"");
+ const jwt=req.headers.get("Authorization")?.replace(/^Bearer\s+/i,"");
  if(!jwt)return json({error:"Authentication required"},401);
  const url=Deno.env.get("SUPABASE_URL")!,key=Deno.env.get("SUPABASE_ANON_KEY")!,secret=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
  const auth=createClient(url,key,{auth:{persistSession:false}});
