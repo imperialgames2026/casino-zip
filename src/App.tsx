@@ -70,11 +70,11 @@ export default function App() {
     if (!activeGame || !session || fairBusy) return;
     setFairBusy(true); setResult(""); setFairProof("");
     try {
-      const clientSeed = crypto.randomUUID();
-      const { data: committed, error: commitError } = await supabase.functions.invoke("provably-fair-demo", { body: { action: "commit", game: activeGame, clientSeed } });
+      const { data: committed, error: commitError } = await supabase.functions.invoke("provably-fair-v2", { body: { action: "commit", game: activeGame } });
       if (commitError || !committed?.id) throw commitError ?? new Error("Commit failed");
       setFairProof("Committed hash: " + committed.server_seed_hash);
-      const { data: revealed, error: revealError } = await supabase.functions.invoke("provably-fair-demo", { body: { action: "reveal", roundId: committed.id } });
+      const clientSeed = crypto.randomUUID();
+      const { data: revealed, error: revealError } = await supabase.functions.invoke("provably-fair-v2", { body: { action: "reveal", roundId: committed.id, clientSeed } });
       if (revealError || !revealed?.serverSeed) throw revealError ?? new Error("Reveal failed");
       if (revealed.roundId !== committed.id || revealed.game !== activeGame || revealed.clientSeed !== clientSeed || revealed.nonce !== committed.nonce || revealed.serverSeedHash !== committed.server_seed_hash) throw new Error("Round commitment mismatch");
       const verified = await verifyFairRound({ game: activeGame, serverSeed: revealed.serverSeed, clientSeed, nonce: revealed.nonce, serverSeedHash: committed.server_seed_hash, outcome: revealed.outcome });
