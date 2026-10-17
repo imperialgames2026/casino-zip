@@ -11,6 +11,7 @@ export function applyPokerAction(table:Table,seatId:string,action:Action,expecte
  if(seat.id!==seatId||seat.folded||seat.allIn)throw Error("Not your turn");
  if(!valid(seat.stack)||!valid(seat.streetBet)||!valid(seat.committed)||!valid(t.currentBet)||!valid(t.minimumRaise)||t.minimumRaise<1)throw Error("Invalid table amounts");
  const toCall=Math.max(0,t.currentBet-seat.streetBet);
+ const raiseAllowed=!seat.acted;
  let contribution=0;
  if(action.type==="fold")seat.folded=true;
  else if(action.type==="check"){if(toCall!==0)throw Error("Cannot check facing a bet");}
@@ -25,7 +26,10 @@ export function applyPokerAction(table:Table,seatId:string,action:Action,expecte
   if(contribution>seat.stack)throw Error("Insufficient chips");
   const raiseSize=target!-t.currentBet;
   if(raiseSize<t.minimumRaise)throw Error("Raise below minimum");
- }else if(action.type==="allin")contribution=seat.stack;
+ }else if(action.type==="allin"){
+  if(seat.streetBet+seat.stack>t.currentBet&&!raiseAllowed)throw Error("Betting not reopened by short all-in");
+  contribution=seat.stack;
+ }
  else throw Error("Unknown action");
  if(action.type!=="fold"&&action.type!=="check"&&action.type!=="call"&&action.type!=="allin"&&contribution===0)throw Error("Zero bet");
  const newTotal=seat.streetBet+contribution;
