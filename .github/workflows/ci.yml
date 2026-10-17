@@ -102,8 +102,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
-          STAGING_TEST_EMAIL: ${{ secrets.STAGING_TEST_EMAIL }}
-          STAGING_TEST_PASSWORD: ${{ secrets.STAGING_TEST_PASSWORD }}
+          STAGING_READONLY_TEST_EMAIL: ${{ secrets.STAGING_READONLY_TEST_EMAIL }}
+          STAGING_READONLY_TEST_PASSWORD: ${{ secrets.STAGING_READONLY_TEST_PASSWORD }}
         run: npx --yes tsx scripts/staging-readonly-e2e.ts
 
 
