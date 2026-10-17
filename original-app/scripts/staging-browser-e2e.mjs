@@ -44,6 +44,12 @@ try {
   assert.equal(await testerPage.getByText('Transaction history could not be loaded', { exact: false }).count(), 0);
   console.log('PASS browser authenticated owner-only staging transaction history');
 
+  await visit(testerPage, '/ResponsiblePlay', 'Responsible Play');
+  await testerPage.getByRole('heading', { name: 'Self-exclude from Imperial Games' }).waitFor();
+  assert.equal(await testerPage.getByRole('button', { name: 'Activate self-exclusion' }).count(), 0);
+  await testerPage.getByText('Read-only Tester accounts cannot change account restrictions.').waitFor();
+  console.log('PASS browser responsible play controls are read-only for Testers');
+
   await visit(testerPage, '/ProvablyFair', 'Provably Fair · Practice Verification');
   await testerPage.getByRole('heading', { name: 'Your revealed practice rounds' }).waitFor();
   console.log('PASS browser original ProvablyFair page');
