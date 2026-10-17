@@ -4,7 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
 import { verifyFairRound } from "./lib/fairness";
 
-type Page = "Lobby" | "Games" | "Wallet" | "Account";
+type Page = "Lobby" | "Games" | "Wallet" | "Account" | "Admin";
 const games = [
   { name: "Royal Dice", icon: "🎲", description: "Roll two dice and aim for seven.", type: "dice" },
   { name: "Imperial Coin", icon: "🪙", description: "Guess heads or tails.", type: "coin" },
@@ -26,6 +26,8 @@ export default function App() {
   const [rounds, setRounds] = useState(0);
   const [fairProof, setFairProof] = useState("");
   const [fairBusy, setFairBusy] = useState(false);
+  const [adminResult, setAdminResult] = useState("");
+  const [adminBusy, setAdminBusy] = useState(false);
 
   useEffect(() => {
     if (!supabase) return;
@@ -94,7 +96,7 @@ export default function App() {
     <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap", padding: "20px max(24px, 6vw)", borderBottom: "1px solid #34415a" }}>
       <strong style={{ fontSize: 25, color: "#e4c47d" }}>♛ Imperial Games</strong>
       <nav aria-label="Main navigation" style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {(["Lobby", "Games", "Wallet", "Account"] as const).map(item => <button key={item} onClick={() => { setPage(item); setActiveGame(null); setNotice(""); }} aria-current={page === item ? "page" : undefined} style={{ ...buttonStyle, background: page === item ? "#b7954c" : "#19243b", color: page === item ? "#111827" : "#f7f3e8" }}>{item}</button>)}
+        {(["Lobby", "Games", "Wallet", "Account", "Admin"] as const).map(item => <button key={item} onClick={() => { setPage(item); setActiveGame(null); setNotice(""); }} aria-current={page === item ? "page" : undefined} style={{ ...buttonStyle, background: page === item ? "#b7954c" : "#19243b", color: page === item ? "#111827" : "#f7f3e8" }}>{item}</button>)}
       </nav>
     </header>
     <main style={{ maxWidth: 1100, margin: "auto", padding: "48px 24px" }}>
@@ -115,6 +117,22 @@ export default function App() {
           <p><button style={buttonStyle} onClick={play}>Local demo round</button> {session && <button style={buttonStyle} disabled={fairBusy} onClick={playServerRound}>{fairBusy ? "Calling server…" : "Play provably fair server round"}</button>}</p><p aria-live="polite">{result}</p>{fairProof && <p style={{ overflowWrap: "anywhere", fontSize: 12 }} aria-live="polite">{fairProof}</p>}{!session && <p>Sign in under Account to play verified server rounds.</p>}
         </section>}
       </section>}
+      {page === "Admin" && <section><h1>Crash / Treball round administration</h1><div style={panelStyle}>
+        <p>Generate a private 150-round batch on the server. Restricted to Admin and Superadmin; server validates authorization. This does not activate wagering or cash-out settlement.</p>
+        <button style={buttonStyle} disabled={!session || adminBusy || !supabase} onClick={async () => {
+          if (!supabase) return;
+          setAdminBusy(true); setAdminResult("");
+          try {
+            const { data, error } = await supabase.functions.invoke("admin-crash-rounds", { body: { action: "generate" } });
+            if (error) throw error;
+            if (!data?.batchId || data.count !== 150) throw new Error(data?.error ?? "Generation not confirmed");
+            setAdminResult("Generated 150 rounds. Batch: " + data.batchId);
+          } catch (e) { setAdminResult(e instanceof Error ? e.message : "Generation failed"); }
+          finally { setAdminBusy(false); }
+        }}>{adminBusy ? "Generating…" : "Generate 150 server rounds"}</button>
+        {!session && <p>Sign in to request generation. Only authorized admins can generate rounds.</p>}
+        {adminResult && <p role="status" aria-live="polite">{adminResult}</p>}
+      </div></section>}
       {page === "Wallet" && <section><h1>Wallet</h1><div style={panelStyle}><h2>Financial transactions unavailable</h2><p>This demo does not issue tokens, store a financial balance, accept deposits, process withdrawals, or provide payouts.</p><p>Secure ledger and payment workflows must be independently implemented and tested before activation.</p></div></section>}
       {page === "Account" && <section><h1>Account</h1><div style={{ ...panelStyle, maxWidth: 520 }}>
         {session ? <><p>Signed in as <strong>{session.user.email ?? session.user.id}</strong></p><button style={buttonStyle} onClick={async () => { const { error } = await supabase!.auth.signOut(); setNotice(error?.message ?? "Signed out."); }}>Sign out</button></> :
