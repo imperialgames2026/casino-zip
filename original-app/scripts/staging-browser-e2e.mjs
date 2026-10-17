@@ -39,15 +39,13 @@ try {
   assert.equal(await testerPage.getByRole('button', { name: 'Roll practice dice' }).isDisabled(), true);
   console.log('PASS browser tester cannot start game rounds');
 
-  await visit(testerPage, '/AdminSupport', 'nothing').catch(async () => {
-    await testerPage.getByText('Admin or Superadmin authorization required.').waitFor({ timeout: 10000 });
-  });
+  await testerPage.goto(base + '/AdminSupport');
+  await testerPage.getByText('Admin or Superadmin authorization required.').waitFor({ timeout: 15000 });
   assert.equal(await testerPage.getByText('Admin or Superadmin authorization required.').count(), 1);
   console.log('PASS browser tester denied staff support');
 
-  await visit(testerPage, '/Home', 'placeholder').catch(async () => {
-    await testerPage.locator('nav').first().waitFor({ timeout: 15000 });
-  });
+  await testerPage.goto(base + '/Home');
+  await testerPage.locator('nav').first().waitFor({ timeout: 15000 });
   const pokerLink = testerPage.getByRole('link', { name: 'Poker', exact: true });
   if (await pokerLink.count()) {
     await pokerLink.first().click();
