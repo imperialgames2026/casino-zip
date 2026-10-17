@@ -76,6 +76,32 @@ try {
   const forbiddenStatus = await call('status', { ticketId: opened.id, status: 'closed' }, 403);
   if (forbiddenStatus.error !== 'Staff role required') throw new Error('Tester may close tickets');
   console.log('PASS denied staff queue and status mutations for Tester');
+
+  // The authenticated account has already been independently verified as a
+  // Tester. The 403 assertion cannot activate exclusion or change balances.
+  async function exclusion(action: string, fields: Record<string,unknown>, status: number) {
+    const response = await fetch(url + '/functions/v1/ig-self-exclusion-v1', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + auth.session!.access_token,
+        apikey: key!,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ action, ...fields }),
+    });
+    const json = await response.json();
+    if (response.status !== status) throw new Error('Self-exclusion status mismatch ' + response.status);
+    return json;
+  }
+  const exclusionStatus = await exclusion('status', {}, 200);
+  if (exclusionStatus.canSelfExclude !== false || exclusionStatus.playerCanReinstate !== false) {
+    throw new Error('Tester self-exclusion restrictions missing');
+  }
+  const forbiddenExclusion = await exclusion('activate', { requestId: crypto.randomUUID() }, 403);
+  if (forbiddenExclusion.error !== 'Read-only tester account') {
+    throw new Error('Tester was not denied self-exclusion mutation');
+  }
+  console.log('PASS self-exclusion status and blocked Tester mutation; no account changed');
 } finally {
   await client.auth.signOut();
 }
