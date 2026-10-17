@@ -34,7 +34,7 @@ describe("Holdem table lifecycle",()=>{
 });
 describe("Blackjack lifecycle",()=>{
  it("hides dealer hole card before settlement",()=>{
-  const shoe=[{rank:10},{rank:9},{rank:7},{rank:7},{rank:2},{rank:10}];
+  const shoe=[{rank:10},{rank:9},{rank:10},{rank:7},{rank:2},{rank:10}];
   const table=beginBlackjack([{id:"p",bet:10}],shoe);
   expect(blackjackSnapshot(table,"p").dealer[1]).toEqual({hidden:true});
   const stood=blackjackAction(table,"p","stand",table.revision);
