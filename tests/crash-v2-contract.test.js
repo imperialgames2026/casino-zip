@@ -7,6 +7,9 @@ const autoFix = read("supabase/migrations/20261018235300_crash_v2_prevent_early_
 const edge = read("supabase/functions/ig-crash-v2/index.ts");
 const ui = read("src/components/CrashArena.tsx");
 const app = read("src/App.tsx");
+const originalRoute = read("original-app/src/App.jsx");
+const originalUI = read("original-app/src/components/games/CrashPracticeV2.jsx");
+const originalGames = read("original-app/src/pages/Games.jsx");
 
 describe("Crash / Trenball staging-only contracts", () => {
   it("has server-owned queue, seeds, authoritative wall-clock settlement, and no direct browser DB access", () => {
@@ -56,5 +59,17 @@ describe("Crash / Trenball staging-only contracts", () => {
     expect(ui).toContain("FREE PLAY ONLY");
     expect(ui).not.toContain(".from(\"wallets\")");
     expect(ui).not.toContain("base44");
+  });
+  it("replaces legacy Crash and Trenball routes with a staged server-only experience", () => {
+    expect(originalRoute).toContain("currentRoute === '/PlayRocket' || currentRoute === '/PlayTrenball'");
+    expect(originalRoute).toContain("<CrashPracticeV2 initialMode=");
+    expect(originalRoute).toContain("'/Games'");
+    expect(originalUI).toContain("ig-crash-v2");
+    expect(originalUI).toContain("Cash out at live multiplier");
+    expect(originalUI).not.toContain("base44.");
+    expect(originalUI).not.toContain("UserWallet.update");
+    expect(originalUI).not.toContain("Transaction.create");
+    expect(originalGames).toContain('<Link to="/PlayRocket"');
+    expect(originalGames).toContain('<Link to="/PlayTrenball"');
   });
 });
