@@ -30,7 +30,7 @@ describe("Crash / Trenball staging-only contracts", () => {
     for (const mode of ["crash_manual", "crash_auto", "tren_red", "tren_green", "tren_yellow"])
       expect(sql).toContain(mode);
     expect(sql).toContain("if old.user_id<>p_actor");
-    expect(sql).toContain("p_action='cashout'");
+    expect(sql).toContain("cashout_request=p_request");
     expect(sql).toContain("v.crash_point");
     expect(sql).toContain("paid_units=paid");
     expect(autoFix).toContain("target<=x and target<=v.crash_point");
