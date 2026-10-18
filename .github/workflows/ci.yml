@@ -54,6 +54,19 @@ jobs:
           if grep -R -nE "from ['\"]@base44|npm:@base44" original-app/src --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx'; then
             echo "Base44 runtime SDK imports remain"; exit 1
           fi
+      - name: Guard practice poker transport against client-side settlement
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import assert from 'node:assert/strict';
+          const client = readFileSync('original-app/src/lib/practicePoker.js', 'utf8');
+          assert.match(client, /functions\.invoke\('poker-table-v1'/);
+          assert.match(client, /version: expectedVersion/);
+          assert.match(client, /actionId/);
+          assert.doesNotMatch(client, /\.from\(['"](?:wallet|transactions|poker_tables|poker_seats)/);
+          assert.doesNotMatch(client, /service.role|SERVICE_ROLE|settle_v1|private_hole/);
+          console.log('Practice poker client guard passed');
+          NODE
       - name: Install locked migrated original dependencies
         working-directory: original-app
         run: npm ci --no-audit --no-fund
