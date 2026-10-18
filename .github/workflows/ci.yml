@@ -54,6 +54,8 @@ jobs:
           if grep -R -nE "from ['\"]@base44|npm:@base44" original-app/src --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx'; then
             echo "Base44 runtime SDK imports remain"; exit 1
           fi
+      - name: Test practice craps state transitions (no money movements)
+        run: node --test original-app/src/lib/crapsRound.test.js
       - name: Install locked migrated original dependencies
         working-directory: original-app
         run: npm ci --no-audit --no-fund
