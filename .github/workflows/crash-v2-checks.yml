@@ -21,3 +21,17 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run test
+
+  original-crash-source-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install original app dependencies
+        working-directory: original-app
+        run: npm ci --no-audit --no-fund
+      - name: Build original casino Crash/Trenball routes
+        working-directory: original-app
+        run: npm run build
