@@ -20,6 +20,7 @@ import BlackjackLobby from './pages/BlackjackLobby';
 import PlayMultiplayerBlackjack from './pages/PlayMultiplayerBlackjack';
 import ExclusionBanner from './components/casino/ExclusionBanner';
 import SupabaseSignIn from './components/SupabaseSignIn';
+import CrashPracticeV2 from './components/games/CrashPracticeV2';
 import CryptoDepositNetworksPreview from './components/casino/CryptoDepositNetworksPreview';
 import ProfileStats from './pages/ProfileStats';
 import Leaderboard from './pages/Leaderboard';
@@ -88,9 +89,12 @@ const AuthenticatedApp = () => {
   if (user?.is_excluded && currentRoute !== '/Support') return <ExclusionBanner />;
   // Server-side functions also deny gameplay mutations. The migration preview
   // must not expose old client-authoritative wagering or identity collection.
+  if (currentRoute === '/PlayRocket' || currentRoute === '/PlayTrenball') {
+    return <LayoutWrapper currentPageName={currentRoute.slice(1)}><CrashPracticeV2 initialMode={currentRoute === '/PlayTrenball' ? 'trenball' : 'crash'} /></LayoutWrapper>;
+  }
   const approvedRoutes = new Set([
     '/', '/Home', '/Profile', '/TransactionHistory', '/PrivacyPolicy',
-    '/TermsOfService', '/CookiesPolicy', '/ResponsiblePlay',
+    '/TermsOfService', '/CookiesPolicy', '/ResponsiblePlay', '/Games',
     '/FairnessManifesto', '/Licensing', '/DepositNetworks', '/ProvablyFair', '/PlayDice',
     '/Support', '/AdminSupport',
   ]);
