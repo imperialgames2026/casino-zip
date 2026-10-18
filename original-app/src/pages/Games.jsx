@@ -88,6 +88,20 @@ export default function Games() {
       <div className="max-w-7xl mx-auto px-4 py-12">
         <WeeklyTokenLeaderboard />
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-7">
+          <Link to="/PlayRocket" className="group rounded-2xl bg-gradient-to-r from-[#281c31] to-[#3a2434] border border-amber-500/30 p-6 hover:border-amber-400/60 transition-colors">
+            <div className="text-4xl mb-3">🚀</div><h2 className="text-2xl text-amber-200 font-bold">Imperial Crash</h2>
+            <p className="text-gray-300 mt-2 text-sm">Server-synchronized launch · manual and automatic cashout · practice only</p>
+            <span className="inline-block mt-4 text-amber-200 font-bold text-sm">Play free Crash →</span>
+          </Link>
+          <Link to="/PlayTrenball" className="group rounded-2xl bg-gradient-to-r from-[#182f2e] to-[#332d23] border border-amber-500/30 p-6 hover:border-amber-400/60 transition-colors">
+            <div className="text-4xl mb-3">🎯</div><h2 className="text-2xl text-amber-200 font-bold">Trenball</h2>
+            <p className="text-gray-300 mt-2 text-sm">Red, green, or yellow · shared Crash result · practice only</p>
+            <span className="inline-block mt-4 text-amber-200 font-bold text-sm">Play free Trenball →</span>
+          </Link>
+        </div>
+
+
         <Tabs defaultValue="all" className="space-y-8">
           <TabsList className="bg-white/5 border border-white/10 p-1 rounded-xl flex-wrap h-auto gap-1">
             {[
