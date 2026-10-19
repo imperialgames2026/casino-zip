@@ -33,6 +33,18 @@ export const practicePoker = Object.freeze({
         !Number.isSafeInteger(amount) || amount < 0) throw new Error('Invalid poker action');
     return invokePoker({ action: 'act', tableId, actionId, version: expectedVersion, move, amount });
   },
+  advance: tableId => {
+    if (!simple(tableId)) throw new Error('Invalid table ID');
+    return invokePoker({ action: 'advance', tableId });
+  },
+  settle: tableId => {
+    if (!simple(tableId)) throw new Error('Invalid table ID');
+    return invokePoker({ action: 'settle', tableId });
+  },
+  sync: tableId => {
+    if (!simple(tableId)) throw new Error('Invalid table ID');
+    return invokePoker({ action: 'sync', tableId });
+  },
   tick: tableId => {
     if (!simple(tableId)) throw new Error('Invalid table ID');
     return invokePoker({ action: 'tick', tableId });
