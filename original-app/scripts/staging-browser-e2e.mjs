@@ -69,15 +69,15 @@ try {
   await testerPage.getByRole('heading', { name: 'Practice Dice', exact: true }).waitFor({ timeout: 20000 });
   console.log('PASS browser approved Supabase practice Dice game catalog');
 
-  // This checks client-side React Router navigation without exposing an
-  // unfinished Poker link to players in the real staging navigation.
-  await testerPage.evaluate(() => {
-    window.history.pushState({}, '', '/PokerLobby');
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  });
-  await testerPage.getByText('This page is disabled until its operations have been migrated', { exact: false })
-    .waitFor({ timeout: 15000 });
-  console.log('PASS browser React Router blocks unfinished casino pages after navigation');
+  // The migrated PokerLobby is practice-only and has no Base44 wallet mutations.
+  await visit(testerPage, '/PokerLobby', 'Imperial Poker Lobby');
+  await testerPage.getByText('Supabase practice chips only', { exact: false }).waitFor();
+  assert.equal(await testerPage.getByText('Tournament buy-in', { exact: false }).count(), 0);
+  console.log('PASS browser migrated practice poker lobby with no paid buy-in controls');
+
+  await visit(testerPage, '/PlayPoker', 'Imperial Poker');
+  await testerPage.getByText('Practice chips only', { exact: false }).waitFor();
+  console.log('PASS browser migrated practice poker table controls');
   await tester.close();
 
   const player = await browser.newContext({ viewport: { width: 1365, height: 900 } });
