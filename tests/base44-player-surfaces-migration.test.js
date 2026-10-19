@@ -76,4 +76,24 @@ describe('Base44 migration: safe read-only player surfaces', () => {
     }
   });
 
+  it('active Supabase screens no longer import or invoke the Base44-named compatibility adapter', () => {
+    const filenames = [
+      'original-app/src/App.jsx',
+      'original-app/src/pages/Home.jsx',
+      'original-app/src/pages/Profile.jsx',
+      'original-app/src/pages/TransactionHistory.jsx',
+      'original-app/src/components/casino/WeeklyTokenLeaderboard.jsx',
+      'original-app/src/components/VerifiedLayout.jsx',
+    ];
+    for (const name of filenames) {
+      const source = read(name);
+      expect(source).not.toContain("from '@/api/base44Client'");
+      expect(source).not.toMatch(/base44\\.(auth|entities|functions)\\./);
+    }
+    const profile = read('original-app/src/pages/Profile.jsx');
+    const weekly = read('original-app/src/components/casino/WeeklyTokenLeaderboard.jsx');
+    expect(profile).toContain('setOneTimeDisplayName(candidate)');
+    expect(weekly).toContain("functions.invoke('legacy-leaderboard-v1'");
+  });
+
 });
