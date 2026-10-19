@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { readOwnWallet } from '@/lib/supabaseLegacyReads';
+import { setOneTimeDisplayName } from '@/lib/supabaseIdentity';
 import { ShieldCheck, UserRound, Wallet, BadgeCheck, AlertTriangle } from 'lucide-react';
 
 /**
@@ -17,7 +19,7 @@ export default function Profile() {
   const [notice, setNotice] = useState('');
   const wallets = useQuery({
     queryKey: ['staging-own-profile-wallet', user?.id],
-    queryFn: async () => base44.entities.UserWallet.filter({ user_email: user?.email }),
+    queryFn: async () => readOwnWallet({ user_email: user?.email }),
     enabled: !!user?.id,
     retry: 1,
   });
@@ -37,7 +39,7 @@ export default function Profile() {
     setError('');
     setNotice('');
     try {
-      await base44.functions.invoke('updateUsername', { username: candidate });
+      await setOneTimeDisplayName(candidate);
       await checkUserAuth();
       setNickname('');
       setNotice('Display name saved. Your account determines whether later changes are permitted.');
@@ -55,6 +57,11 @@ export default function Profile() {
     <div className="mx-auto max-w-5xl">
       <p className="text-pink-300 uppercase tracking-widest text-sm">Imperial Games · Your Account</p>
       <h1 className="text-4xl font-black mt-1 mb-8">Player Profile</h1>
+      <nav aria-label="Player self-service links" className="flex flex-wrap gap-3 mb-7">
+        <Link className="rounded-lg border border-amber-500/40 px-4 py-2 text-sm text-amber-200" to="/ProfileStats">Poker analytics</Link>
+        <Link className="rounded-lg border border-amber-500/40 px-4 py-2 text-sm text-amber-200" to="/KYCVerification">KYC status</Link>
+        <Link className="rounded-lg border border-amber-500/40 px-4 py-2 text-sm text-amber-200" to="/Leaderboard">Practice leaderboard</Link>
+      </nav>
       {error && <p role="alert" className="mb-4 rounded-xl border border-red-500/50 p-4 text-red-200">{error}</p>}
       {notice && <p role="status" className="mb-4 rounded-xl border border-green-500/40 p-4 text-green-200">{notice}</p>}
       <div className="grid lg:grid-cols-[1fr_1fr] gap-5">

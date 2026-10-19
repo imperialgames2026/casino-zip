@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { currentIdentity } from '@/lib/supabaseIdentity';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -20,6 +20,11 @@ import BlackjackLobby from './pages/BlackjackLobby';
 import PlayMultiplayerBlackjack from './pages/PlayMultiplayerBlackjack';
 import ExclusionBanner from './components/casino/ExclusionBanner';
 import SupabaseSignIn from './components/SupabaseSignIn';
+import VerifiedPracticeCatalog from './pages/VerifiedPracticeCatalog';
+import VerifiedPracticeLeaderboard from './pages/VerifiedPracticeLeaderboard';
+import VerifiedPlayerAnalytics from './pages/VerifiedPlayerAnalytics';
+import VerifiedKYCStatus from './pages/VerifiedKYCStatus';
+import VerifiedLayout from './components/VerifiedLayout';
 import CryptoDepositNetworksPreview from './components/casino/CryptoDepositNetworksPreview';
 import ProfileStats from './pages/ProfileStats';
 import Leaderboard from './pages/Leaderboard';
@@ -37,13 +42,13 @@ import PrizeClaims from './pages/PrizeClaims';
 import AdminSweepstakesAudit from './pages/AdminSweepstakesAudit';
 import AdminIGTSupply from './pages/AdminIGTSupply';
 
-const { Pages, Layout, mainPage } = pagesConfig;
+const { Pages, mainPage } = pagesConfig;
 
 // Guard: blocks excluded users from play pages
 function ExcludedGuard({ children }) {
   const [status, setStatus] = React.useState('loading'); // loading | ok | excluded
   React.useEffect(() => {
-    base44.auth.me().then(u => setStatus(u?.is_excluded ? 'excluded' : 'ok')).catch(() => setStatus('unverified'));
+    currentIdentity().then(u => setStatus(u?.is_excluded ? 'excluded' : 'ok')).catch(() => setStatus('unverified'));
   }, []);
   if (status === 'loading') return null;
   if (status === 'excluded') return <ExclusionBanner />;
@@ -53,9 +58,7 @@ function ExcludedGuard({ children }) {
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
-const LayoutWrapper = ({ children, currentPageName }) => Layout ?
-  <Layout currentPageName={currentPageName}>{children}</Layout>
-  : <>{children}</>;
+const LayoutWrapper = ({ children }) => <VerifiedLayout>{children}</VerifiedLayout>;
 
 const AuthenticatedApp = () => {
   // React Router updates this hook on every client-side navigation.
@@ -86,6 +89,16 @@ const AuthenticatedApp = () => {
   const currentRoute = routeLocation.pathname.replace(/\/+$/, '') || '/';
   // Even excluded users can submit a support request or appeal a restriction.
   if (user?.is_excluded && currentRoute !== '/Support') return <ExclusionBanner />;
+  // Migrated read-only surfaces bypass unsafe legacy pages. Original aesthetics
+  // are retained while unconverted client-authoritative operations stay blocked.
+  if (currentRoute === '/Games')
+    return <LayoutWrapper currentPageName="Games"><VerifiedPracticeCatalog /></LayoutWrapper>;
+  if (currentRoute === '/Leaderboard')
+    return <LayoutWrapper currentPageName="Leaderboard"><VerifiedPracticeLeaderboard /></LayoutWrapper>;
+  if (currentRoute === '/ProfileStats')
+    return <LayoutWrapper currentPageName="ProfileStats"><VerifiedPlayerAnalytics /></LayoutWrapper>;
+  if (currentRoute === '/KYCVerification')
+    return <LayoutWrapper currentPageName="KYCVerification"><VerifiedKYCStatus /></LayoutWrapper>;
   // Server-side functions also deny gameplay mutations. The migration preview
   // must not expose old client-authoritative wagering or identity collection.
   const approvedRoutes = new Set([

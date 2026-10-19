@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { readOwnTransactions } from '@/lib/supabaseLegacyReads';
 import { History, ShieldCheck, Search, AlertTriangle, RefreshCw } from 'lucide-react';
 
 /**
@@ -17,7 +17,7 @@ export default function TransactionHistory() {
   const query = useQuery({
     queryKey: ['own-staging-ledger-history', user?.id],
     enabled: !!user?.id,
-    queryFn: () => base44.entities.Transaction.filter({ user_email: user.email }, '-created_date', 100),
+    queryFn: () => readOwnTransactions({ user_email: user.email }, '-created_date', 100),
     retry: 1,
   });
   const transactions = query.data || [];

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Dices, ShieldCheck, Wallet, Headphones, UserRound, ArrowRight, CircleAlert } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { readApprovedPracticeGames } from '@/lib/supabaseLegacyReads';
 import GameCard from '@/components/casino/GameCard';
 import WeeklyTokenLeaderboard from '@/components/casino/WeeklyTokenLeaderboard';
 
@@ -13,6 +13,10 @@ import WeeklyTokenLeaderboard from '@/components/casino/WeeklyTokenLeaderboard';
  */
 const safeLinks = [
   { label: 'Player profile', to: '/Profile', icon: UserRound, description: 'Account settings and staging balances' },
+  { label: 'Game library', to: '/Games', icon: Dices, description: 'Server-approved practice games only' },
+  { label: 'Player analytics', to: '/ProfileStats', icon: ShieldCheck, description: 'Verified post-hand poker statistics' },
+  { label: 'Weekly practice board', to: '/Leaderboard', icon: Dices, description: 'Anonymous practice results' },
+  { label: 'Verification status', to: '/KYCVerification', icon: UserRound, description: 'Check verified account status safely' },
   { label: 'Transaction history', to: '/TransactionHistory', icon: Wallet, description: 'Your own internal test-currency history' },
   { label: 'Provably Fair', to: '/ProvablyFair', icon: ShieldCheck, description: 'Verify revealed practice rounds' },
   { label: 'Support center', to: '/Support', icon: Headphones, description: 'Private support tickets' },
@@ -22,7 +26,7 @@ export default function Home() {
   const approvedGames = useQuery({
     queryKey: ['approved-staging-practice-games', user?.id],
     enabled: !!user?.id,
-    queryFn: () => base44.entities.Game.filter({ is_active: true }),
+    queryFn: () => readApprovedPracticeGames({ is_active: true }),
     retry: 1,
   });
   return <main className="min-h-screen bg-[#0A0612] text-white">
