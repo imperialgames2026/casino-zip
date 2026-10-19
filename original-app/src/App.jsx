@@ -36,6 +36,7 @@ import AMOE from './pages/AMOE';
 import PrizeClaims from './pages/PrizeClaims';
 import AdminSweepstakesAudit from './pages/AdminSweepstakesAudit';
 import AdminIGTSupply from './pages/AdminIGTSupply';
+import PokerBotLab from './pages/PokerBotLab';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 
@@ -96,6 +97,10 @@ const AuthenticatedApp = () => {
   ]);
   if (currentRoute === '/AdminSupport' && !['admin', 'superadmin'].includes(user?.role)) {
     return <main role="alert" style={{padding:32}}>Admin or Superadmin authorization required.</main>;
+  }
+  if (currentRoute === '/PokerBotLab') {
+    if (user?.role !== 'superadmin') return <main role="alert" style={{padding:32}}>Superadmin access required.</main>;
+    return <LayoutWrapper currentPageName="PokerBotLab"><PokerBotLab /></LayoutWrapper>;
   }
   if (currentRoute === '/DepositNetworks') return <CryptoDepositNetworksPreview />;
   if (!approvedRoutes.has(currentRoute)) return <main role="alert" style={{padding:32}}>
