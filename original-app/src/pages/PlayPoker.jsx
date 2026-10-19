@@ -5,6 +5,7 @@ import { practicePoker } from '@/lib/practicePoker';
 export default function PlayPoker() {
   const initialTable = new URLSearchParams(window.location.search).get('tableId') || '';
   const [tableId, setTableId] = useState(initialTable);
+  const [joinId, setJoinId] = useState(initialTable);
   const [snapshot, setSnapshot] = useState(null);
   const [status, setStatus] = useState('Ready to create or join a practice table.');
   const [busy, setBusy] = useState(false);
@@ -30,6 +31,7 @@ export default function PlayPoker() {
       const result = await task();
       if (result?.tableId) {
         setTableId(result.tableId);
+        setJoinId(result.tableId);
         window.history.replaceState(null, '', '/PlayPoker?tableId=' + encodeURIComponent(result.tableId));
       }
       setStatus('Request accepted by the practice poker server.');
@@ -58,8 +60,8 @@ export default function PlayPoker() {
       </div>
       <section className="bg-slate-800 rounded-xl p-4 flex flex-wrap gap-2">
         <input aria-label="Table ID" className="bg-slate-900 border border-slate-600 rounded px-3 py-2 flex-1 min-w-48"
-          value={tableId} onChange={e => setTableId(e.target.value.trim())} placeholder="Paste a table UUID to join" />
-        <button disabled={busy || !tableId} onClick={() => run(() => practicePoker.join(tableId))}
+          value={joinId} onChange={e => setJoinId(e.target.value.trim())} placeholder="Paste a table UUID to join" />
+        <button disabled={busy || !joinId} onClick={() => run(async () => { const response = await practicePoker.join(joinId); return {...response, tableId: joinId}; })}
           className="bg-emerald-700 disabled:opacity-50 rounded px-4 py-2">Join table</button>
         <button disabled={busy || !tableId} onClick={() => refresh()} className="bg-slate-600 rounded px-4 py-2">Refresh</button>
       </section>
@@ -72,6 +74,7 @@ export default function PlayPoker() {
           {(t.board || []).map((card, i) => <span key={i} className="rounded bg-white text-black text-xl px-3 py-4">
             {typeof card === 'string' ? card : (card.rank + card.suit)}</span>)}
         </div>
+        <p className="my-2 text-sm text-emerald-200">Acting seat: {t.turnIndex ?? 'none'} · Blind {t.smallBlind}/{t.bigBlind} · State version {t.version}</p>
         <p className="my-5 text-2xl font-bold">Practice Pot: {seats.reduce((a, s) => a + (Number(s.committed) || 0), 0)} chips</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {seats.map(s => <div key={s.seat_no} className="bg-black/30 rounded-xl p-3 text-left">
@@ -90,9 +93,15 @@ export default function PlayPoker() {
             <input aria-label="Bet or raise target" type="number" min="0" step="1" value={bet}
               onChange={e => setBet(e.target.value)} className="block bg-slate-950 rounded p-2 w-40" /></label>
         </div>
+        {t.status === 'showdown' && <div className="flex flex-wrap gap-2">
+          {t.street !== 'river' && <button disabled={busy} onClick={() => run(() => practicePoker.advance(tableId))}
+            className="bg-indigo-700 px-4 py-3 rounded">Deal next street</button>}
+          {t.street === 'river' && <button disabled={busy} onClick={() => run(() => practicePoker.settle(tableId))}
+            className="bg-amber-700 px-4 py-3 rounded">Resolve showdown</button>}
+        </div>}
         <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
           {['fold', 'check', 'call', 'bet', 'raise', 'allin'].map(move =>
-            <button key={move} disabled={busy || t.status !== 'betting'} onClick={() => act(move)}
+            <button key={move} disabled={busy || t.status !== 'playing'} onClick={() => act(move)}
               className="capitalize bg-emerald-700 disabled:bg-slate-700 disabled:text-slate-400 p-3 rounded">{move}</button>)}
         </div>
         <p className="text-xs text-slate-400">Moves are validated by the server against seat membership, turn and table revision. Reconnect by reopening this table URL.</p>
