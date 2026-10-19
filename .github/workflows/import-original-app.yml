@@ -1,0 +1,94 @@
+name: Import original casino into editable Supabase source
+on:
+  push:
+    branches: [integration/app-scaffold-audit]
+    paths: [scripts/trigger_original_import.marker]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: original-app-import
+  cancel-in-progress: false
+jobs:
+  import:
+    if: github.ref == 'refs/heads/integration/app-scaffold-audit'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Safely extract preserved original app
+        run: |
+          set -euo pipefail
+          if [ -f original-app/src/App.jsx ]; then
+            echo "Original source already committed; no re-import."
+            exit 0
+          fi
+          unzip -t ig-games.zip
+          mkdir -p original-app
+          unzip -q ig-games.zip -d original-app
+          test -f original-app/src/App.jsx
+          test -f original-app/package-lock.json
+          test -d original-app/base44/functions
+          # The 61 legacy Base44 backends are kept in ig-games.zip solely as
+          # evidence. They must never be mistaken for active server functions.
+          rm -rf original-app/base44 original-app/src/functions
+          cp -R migration/legacy-overlay/src/. original-app/src/
+          cp migration/legacy-overlay/vite.config.js original-app/vite.config.js
+          (cd original-app && node ../migration/legacy-overlay/patch-app.mjs)
+          cat > original-app/README.md <<'EOF'
+          # Imperial Games — preserved original React casino, Supabase migration
+          
+          This is the original 390-entry React application migrated out of the
+          archive into normal editable source. Original casino UI/screens/assets
+          are preserved. The Base44 SDK client, Vite plugin and auth provider
+          have been replaced by a fail-closed Supabase migration adapter.
+          
+          **Preview/staging only.** Unsupported game, payments, identity capture,
+          staking and admin mutation flows are deliberately disabled. The
+          original immutable Base44 backend reference remains in ../ig-games.zip.
+          
+          This source is not a production-ready casino or a financial ledger.
+          Review docs/audits before enabling any route. Never add signing keys.
+          EOF
+      - name: Replace SDK dependencies with Supabase and lock them
+        working-directory: original-app
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm uninstall --save --no-audit --no-fund @base44/sdk @base44/vite-plugin
+          npm install --save --no-audit --no-fund '@supabase/supabase-js@^2'
+          if grep -R -nE "from ['\"]@base44|npm:@base44" src --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx'; then
+            echo "ERROR: Live frontend still imports the Base44 SDK"; exit 1
+          fi
+          if grep -q '"@base44/sdk"' package.json || grep -q '"@base44/vite-plugin"' package.json; then
+            echo "ERROR: Base44 SDK still in runtime dependencies"; exit 1
+          fi
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Ensure neither artifacts nor secrets enter Git
+        run: |
+          set -euo pipefail
+          git add --all original-app
+          git diff --cached --name-only | tee "$RUNNER_TEMP/changed_paths.txt"
+          if grep -E '(^|/)(node_modules|dist|\.env|\.git/|.*\.pem|.*\.key)(/|$)' "$RUNNER_TEMP/changed_paths.txt"; then
+            echo "ERROR: unsafe or generated path staged"; exit 1
+          fi
+          if [ "$(git diff --cached --name-only | wc -l)" -lt 250 ]; then
+            echo "ERROR: original source import unexpectedly incomplete"; exit 1
+          fi
+      - name: Commit editable source on integration branch only
+        run: |
+          set -euo pipefail
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "migration(original-app): version original casino UI with Supabase adapter; keep financial flows blocked"
+            git push origin HEAD:integration/app-scaffold-audit
+          fi

@@ -1,10 +1,31 @@
 name: CI
 on:
   push:
-    branches: [main, integration/app-scaffold-audit]
+    branches: [main, integration/app-scaffold-audit, work/poker-frontend-route-20261018]
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      run_staging_smoke:
+        description: 'Run authenticated, state-changing staging smoke tests (requires staging credentials)'
+        type: boolean
+        required: false
+        default: false
+      run_readonly_auth_e2e:
+        description: 'Run authenticated read-only tester access checks; no game writes'
+        type: boolean
+        required: false
+        default: false
+      run_support_e2e:
+        description: 'Run isolated staging support ticket integration checks'
+        type: boolean
+        required: false
+        default: false
+      run_poker_browser_e2e:
+        description: 'Run two real staging players in isolated Chromium practice poker (creates practice tables)'
+        type: boolean
+        required: false
+        default: false
 permissions:
   contents: read
 jobs:
@@ -19,3 +40,253 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run test
+
+
+  original-app-source-build:
+    # The casino is now editable in source control, rather than extracted only
+    # from a Base44 ZIP. Do NOT deploy this until real feature E2E gates pass.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate editable original casino and blocked legacy SDK imports
+        run: |
+          test -f original-app/src/App.jsx
+          test -f original-app/src/api/base44Client.js
+          test -f original-app/package-lock.json
+          if grep -R -nE "from ['\"]@base44|npm:@base44" original-app/src --include='*.js' --include='*.jsx' --include='*.ts' --include='*.tsx'; then
+            echo "Base44 runtime SDK imports remain"; exit 1
+          fi
+      - name: Guard practice poker transport against client-side settlement
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          import assert from 'node:assert/strict';
+          const client = readFileSync('original-app/src/lib/practicePoker.js', 'utf8');
+          assert.match(client, /functions\.invoke\('poker-table-v1'/);
+          assert.match(client, /version: expectedVersion/);
+          assert.match(client, /actionId/);
+          assert.doesNotMatch(client, /\.from\(['"](?:wallet|transactions|poker_tables|poker_seats)/);
+          assert.doesNotMatch(client, /service.role|SERVICE_ROLE|settle_v1|private_hole/);
+          console.log('Practice poker client guard passed');
+          NODE
+      - name: Prevent legacy poker wallet mutations from reappearing
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const screen = readFileSync('original-app/src/pages/PlayPoker.jsx', 'utf8');
+          const app = readFileSync('original-app/src/App.jsx', 'utf8');
+          assert.match(screen, /practicePoker\.snapshot/);
+          assert.match(screen, /practicePoker\.act/);
+          assert.doesNotMatch(screen, /base44|UserWallet\.update|Transaction\.create|SitAndGoTable\.update/);
+          assert.match(app, /'\/PlayPoker'/);
+          console.log('Poker migration UI guard passed');
+          NODE
+      - name: Syntax-check two-player poker browser test
+        run: node --check original-app/scripts/poker-two-player-e2e.mjs
+      - name: Test practice craps state transitions (no money movements)
+        run: node --test original-app/src/lib/crapsRound.test.js
+      - name: Install locked migrated original dependencies
+        working-directory: original-app
+        run: npm ci --no-audit --no-fund
+      - name: Build migrated original casino from first-class source
+        working-directory: original-app
+        run: npm run build
+      - name: Save original casino preview for QA only
+        uses: actions/upload-artifact@v4
+        with:
+          name: imperial-original-app-source-dist
+          path: original-app/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+
+  legacy-archive-build:
+    # The original 390-entry app is still in ig-games.zip; this job MUST catch
+    # failures before anyone tries to replace it with the small React scaffold.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect and safely extract original application
+        run: |
+          test -s ig-games.zip
+          unzip -t ig-games.zip
+          mkdir -p "$RUNNER_TEMP/imperial-legacy"
+          unzip -q ig-games.zip -d "$RUNNER_TEMP/imperial-legacy"
+          test -f "$RUNNER_TEMP/imperial-legacy/package.json"
+          test -f "$RUNNER_TEMP/imperial-legacy/src/App.jsx"
+          test -f "$RUNNER_TEMP/imperial-legacy/package-lock.json"
+      - name: Install original locked dependencies
+        working-directory: ${{ runner.temp }}/imperial-legacy
+        run: npm ci --no-audit --no-fund
+      - name: Build original application
+        working-directory: ${{ runner.temp }}/imperial-legacy
+        run: npm run build
+      - name: Inventory all original Base44 functions and entity operations
+        run: node scripts/audit-base44-legacy.mjs "$RUNNER_TEMP/imperial-legacy" "$RUNNER_TEMP/legacy-functions-inventory.json"
+      - name: Save complete legacy migration inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: imperial-legacy-function-inventory
+          path: ${{ runner.temp }}/legacy-functions-inventory.json
+          if-no-files-found: error
+          retention-days: 7
+
+
+  migrated-legacy-preview:
+    # Build preserved frontend with a separate, Supabase-only adapter overlay.
+    # Not published to Cloudflare or merged into production.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Extract original casino frontend
+        run: |
+          unzip -t ig-games.zip
+          mkdir -p "$RUNNER_TEMP/imperial-migrated"
+          unzip -q ig-games.zip -d "$RUNNER_TEMP/imperial-migrated"
+      - name: Install legacy locked dependencies
+        working-directory: ${{ runner.temp }}/imperial-migrated
+        run: npm ci --no-audit --no-fund
+      - name: Apply Supabase migration overlay without editing archived source
+        working-directory: ${{ runner.temp }}/imperial-migrated
+        run: |
+          cp -R "$GITHUB_WORKSPACE/migration/legacy-overlay/src/." src/
+          cp "$GITHUB_WORKSPACE/migration/legacy-overlay/vite.config.js" vite.config.js
+          node "$GITHUB_WORKSPACE/migration/legacy-overlay/patch-app.mjs"
+          npm install --no-save --no-package-lock --no-audit --no-fund '@supabase/supabase-js@^2'
+      - name: Compile preserved casino with Supabase adapter
+        working-directory: ${{ runner.temp }}/imperial-migrated
+        run: npm run build
+      - name: Store migrated preview build for QA (not deployed)
+        uses: actions/upload-artifact@v4
+        with:
+          name: imperial-migrated-preview-dist
+          path: ${{ runner.temp }}/imperial-migrated/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+
+
+  readonly-auth-e2e:
+    concurrency:
+      group: imperial-staging-auth-session
+      cancel-in-progress: false
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_readonly_auth_e2e == true }}
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Authenticated tester access and denial checks
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          STAGING_READONLY_TEST_EMAIL: ${{ secrets.STAGING_READONLY_TEST_EMAIL }}
+          STAGING_READONLY_TEST_PASSWORD: ${{ secrets.STAGING_READONLY_TEST_PASSWORD }}
+        run: npx --yes tsx scripts/staging-readonly-e2e.ts
+
+
+
+  support-auth-e2e:
+    concurrency:
+      group: imperial-staging-auth-session
+      cancel-in-progress: false
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_support_e2e == true) || (github.event_name == 'push' && github.ref == 'refs/heads/integration/app-scaffold-audit') }}
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Verify support tickets with staging Tester
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          STAGING_READONLY_TEST_EMAIL: ${{ secrets.STAGING_READONLY_TEST_EMAIL }}
+          STAGING_READONLY_TEST_PASSWORD: ${{ secrets.STAGING_READONLY_TEST_PASSWORD }}
+        run: npx --yes tsx scripts/staging-support-e2e.ts
+
+
+  staging-smoke:
+    concurrency:
+      group: imperial-staging-auth-session
+      cancel-in-progress: false
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_staging_smoke == true }}
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Authenticated staging smoke test
+        env:
+          SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+          STAGING_TEST_EMAIL: ${{ secrets.STAGING_TEST_EMAIL }}
+          STAGING_TEST_PASSWORD: ${{ secrets.STAGING_TEST_PASSWORD }}
+        run: npx --yes tsx scripts/staging-smoke.ts
+
+  poker-two-player-browser-e2e:
+    # Explicit opt-in: creates staging-only practice tables and requires two separate player accounts.
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_poker_browser_e2e == true && github.ref == 'refs/heads/work/poker-frontend-route-20261018' }}
+    needs: [verify, original-app-source-build]
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 20
+    concurrency:
+      group: imperial-staging-auth-session
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install original app and Chromium test runtime
+        working-directory: original-app
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright@^1.57.0
+          npx playwright install --with-deps chromium
+      - name: Start isolated staging frontend
+        working-directory: original-app
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+        run: |
+          test "$VITE_SUPABASE_URL" = "https://qonqemhljgxlwpghkxhn.supabase.co"
+          npm run dev -- --host 127.0.0.1 --port 4174 > /tmp/imperial-poker-vite.log 2>&1 &
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:4174/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/imperial-poker-vite.log
+          exit 1
+      - name: Test two staging players in Chromium
+        working-directory: original-app
+        env:
+          STAGING_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          STAGING_TEST_EMAIL: ${{ secrets.STAGING_TEST_EMAIL }}
+          STAGING_TEST_PASSWORD: ${{ secrets.STAGING_TEST_PASSWORD }}
+          STAGING_PLAYER2_EMAIL: ${{ secrets.STAGING_PLAYER2_EMAIL }}
+          STAGING_PLAYER2_PASSWORD: ${{ secrets.STAGING_PLAYER2_PASSWORD }}
+          BROWSER_BASE_URL: http://127.0.0.1:4174
+        run: node scripts/poker-two-player-e2e.mjs

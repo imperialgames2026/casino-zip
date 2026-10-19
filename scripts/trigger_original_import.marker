@@ -1,0 +1,1 @@
+Import the original casino archive as first-class source using the guarded GitHub Actions workflow. This sentinel triggers the one-time source import; it contains no secrets.

@@ -1,0 +1,98 @@
+import assert from 'node:assert/strict';
+import { chromium } from 'playwright';
+
+const base = process.env.BROWSER_BASE_URL || 'http://127.0.0.1:4174';
+const playerEmail = process.env.STAGING_TEST_EMAIL;
+const playerPassword = process.env.STAGING_TEST_PASSWORD;
+const testerEmail = process.env.STAGING_READONLY_TEST_EMAIL;
+const testerPassword = process.env.STAGING_READONLY_TEST_PASSWORD;
+if (![playerEmail, playerPassword, testerEmail, testerPassword].every(Boolean)) {
+  throw new Error('Staging player and isolated tester credentials required');
+}
+const browser = await chromium.launch({ headless: true });
+async function login(context, email, password) {
+  const page = await context.newPage();
+  await page.goto(base + '/');
+  await page.locator('input[aria-label="Email"]').fill(email);
+  await page.locator('input[aria-label="Password"]').fill(password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForFunction(() => !document.querySelector('input[aria-label="Email"]'), { timeout: 20000 });
+  assert.equal(await page.getByText('Account verification unavailable:', { exact: false }).count(), 0);
+  return page;
+}
+async function visit(page, route, heading) {
+  await page.goto(base + route, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('heading', { name: heading }).first().waitFor({ timeout: 20000 });
+}
+
+try {
+  const tester = await browser.newContext({ viewport: { width: 1365, height: 900 } });
+  const testerPage = await login(tester, testerEmail, testerPassword);
+  testerPage.on('pageerror', err => console.log('DEBUG page JS error:', err.message.slice(0, 1000)));
+  testerPage.on('console', msg => { if (msg.type() === 'error') console.log('DEBUG browser console:', msg.text().slice(0, 850)); });
+  await visit(testerPage, '/Support', 'Support Center');
+  console.log('PASS browser authenticated tester Support page');
+
+  await visit(testerPage, '/Profile', 'Player Profile');
+  await testerPage.getByRole('heading', { name: 'Staging balances' }).waitFor();
+  assert.equal(await testerPage.getByRole('button', { name: 'Set display name' }).count(), 0);
+  assert.equal(await testerPage.getByText('Real crypto deposits, withdrawals', { exact: false }).count(), 1);
+  console.log('PASS browser tester own profile and no nickname mutation control');
+
+  await visit(testerPage, '/TransactionHistory', 'Transaction History');
+  await testerPage.getByText('staging-ledger history only', { exact: false }).waitFor();
+  assert.equal(await testerPage.getByText('Transaction history could not be loaded', { exact: false }).count(), 0);
+  console.log('PASS browser authenticated owner-only staging transaction history');
+
+  await visit(testerPage, '/ResponsiblePlay', 'Responsible Play');
+  await testerPage.getByRole('heading', { name: 'Self-exclude from Imperial Games' }).waitFor();
+  assert.equal(await testerPage.getByRole('button', { name: 'Activate self-exclusion' }).count(), 0);
+  await testerPage.getByText('Read-only Tester accounts cannot change account restrictions.').waitFor();
+  console.log('PASS browser responsible play controls are read-only for Testers');
+
+  await visit(testerPage, '/ProvablyFair', 'Provably Fair · Practice Verification');
+  await testerPage.getByRole('heading', { name: 'Your revealed practice rounds' }).waitFor();
+  console.log('PASS browser original ProvablyFair page');
+
+  await visit(testerPage, '/PlayDice', 'Imperial Practice Dice');
+  assert.equal(await testerPage.getByRole('button', { name: 'Roll practice dice' }).isDisabled(), true);
+  console.log('PASS browser tester cannot start game rounds');
+
+  await testerPage.goto(base + '/AdminSupport');
+  await testerPage.getByText('Admin or Superadmin authorization required.').waitFor({ timeout: 15000 });
+  assert.equal(await testerPage.getByText('Admin or Superadmin authorization required.').count(), 1);
+  console.log('PASS browser tester denied staff support');
+
+  await testerPage.goto(base + '/Home');
+  await testerPage.locator('nav').first().waitFor({ timeout: 15000 });
+  await testerPage.getByRole('heading', { name: 'Available practice games' }).waitFor({ timeout: 20000 });
+  await testerPage.getByRole('heading', { name: 'Practice Dice', exact: true }).waitFor({ timeout: 20000 });
+  console.log('PASS browser approved Supabase practice Dice game catalog');
+
+  // The migrated PokerLobby is practice-only and has no Base44 wallet mutations.
+  await visit(testerPage, '/PokerLobby', 'Imperial Poker Lobby');
+  await testerPage.getByText('Supabase practice chips only', { exact: false }).waitFor();
+  assert.equal(await testerPage.getByText('Tournament buy-in', { exact: false }).count(), 0);
+  console.log('PASS browser migrated practice poker lobby with no paid buy-in controls');
+
+  await visit(testerPage, '/PlayPoker', 'Imperial Poker');
+  await testerPage.getByText('Practice chips only', { exact: false }).waitFor();
+  console.log('PASS browser migrated practice poker table controls');
+  await tester.close();
+
+  const player = await browser.newContext({ viewport: { width: 1365, height: 900 } });
+  const playerPage = await login(player, playerEmail, playerPassword);
+  await visit(playerPage, '/PlayDice', 'Imperial Practice Dice');
+  const roll = playerPage.getByRole('button', { name: 'Roll practice dice' });
+  assert.equal(await roll.isDisabled(), false);
+  await roll.click();
+  await playerPage.getByText('SHA-256 commitment and HMAC result verified').waitFor({ timeout: 25000 });
+  assert.equal(await playerPage.getByText('No balance changed.').count(), 1);
+  console.log('PASS browser real staging player verifies Dice practice outcome with no wager');
+  await playerPage.goto(base + '/ProvablyFair');
+  await playerPage.getByRole('heading', { name: 'Your revealed practice rounds' }).waitFor({ timeout: 15000 });
+  await player.close();
+} finally {
+  await browser.close();
+}
+console.log('PASS original Imperial Games browser staging E2E');
