@@ -10,6 +10,7 @@ import { Home, Gamepad2, UserRound, ShieldCheck, Headphones, Wallet, LogOut, Bar
 const nav = [
   { path: '/Home', label: 'Home', icon: Home },
   { path: '/Games', label: 'Games', icon: Gamepad2 },
+  { path: '/PokerLobby', label: 'Practice Poker', icon: Gamepad2 },
   { path: '/ProfileStats', label: 'Stats', icon: BarChart3 },
   { path: '/Leaderboard', label: 'Leaderboard', icon: Trophy },
   { path: '/Profile', label: 'Profile', icon: UserRound },
