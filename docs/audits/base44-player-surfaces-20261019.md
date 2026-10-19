@@ -55,3 +55,12 @@ For preserved casino: `cd original-app && npm ci --no-audit --no-fund && npm run
 CI source: `.github/workflows/base44-player-screens.yml`. Tests: `tests/base44-player-surfaces-migration.test.js`.
 
 **Release status: blocked for production.** Do not merge to `main`, deploy to the live Cloudflare site, activate payments, or equate a green frontend build with complete casino migration.
+
+## Direct Supabase client cleanup (follow-up)
+
+The following currently approved application components no longer import the Base44-named adapter at all: `App.jsx`, `pages/Home.jsx`, `pages/Profile.jsx`, `pages/TransactionHistory.jsx`, `components/casino/WeeklyTokenLeaderboard.jsx`, and `components/VerifiedLayout.jsx`.
+
+- `Home` calls `readApprovedPracticeGames`; `Profile` and `TransactionHistory` call the owner-scoped Supabase read helpers.
+- Weekly practice reporting invokes the verified `legacy-leaderboard-v1` Edge function directly.
+- Profile one-time display-name claiming uses `setOneTimeDisplayName`, which performs a verified current-identity lookup, only updates the authenticated profile's `display_name` when null, and requires a database-confirmed returned value. Database policy/constraints remain authoritative.
+- The legacy compatibility module remains present **solely** for unconverted, denied features and preserved archival UI. This direct-client cleanup does not imply the historic 61 Base44 backend functions are implemented.
