@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/base44Client';
+import { currentIdentity } from '@/lib/supabaseIdentity';
 import { Toaster } from "@/components/ui/toaster"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
@@ -48,7 +48,7 @@ const { Pages, mainPage } = pagesConfig;
 function ExcludedGuard({ children }) {
   const [status, setStatus] = React.useState('loading'); // loading | ok | excluded
   React.useEffect(() => {
-    base44.auth.me().then(u => setStatus(u?.is_excluded ? 'excluded' : 'ok')).catch(() => setStatus('unverified'));
+    currentIdentity().then(u => setStatus(u?.is_excluded ? 'excluded' : 'ok')).catch(() => setStatus('unverified'));
   }, []);
   if (status === 'loading') return null;
   if (status === 'excluded') return <ExclusionBanner />;
