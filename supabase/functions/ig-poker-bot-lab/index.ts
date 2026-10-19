@@ -225,7 +225,7 @@ Deno.serve(async req=>{
     if(updated.status==="complete")break;
   }
   const finished=await safe<any>(db.from("poker_tables_v1").select("status,street,version,hand_no").eq("id",tableId).single());
-  const finalSeats=await safe<Seat[]>(db.from("poker_seats_v1").select("stack,committed").eq("table_id",tableId));
+  const finalSeats=await safe<{stack:number;committed:number}[]>(db.from("poker_seats_v1").select("stack,committed").eq("table_id",tableId));
   const sum=finalSeats.reduce((x,s)=>x+Number(s.stack)+Number(s.committed),0);
   if(sum!==finalSeats.length*1000)throw Error("Practice chips not conserved after bot run");
   return reply({ok:true,tableId,table:finished,steps:trace,
