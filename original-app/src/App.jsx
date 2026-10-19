@@ -20,6 +20,10 @@ import BlackjackLobby from './pages/BlackjackLobby';
 import PlayMultiplayerBlackjack from './pages/PlayMultiplayerBlackjack';
 import ExclusionBanner from './components/casino/ExclusionBanner';
 import SupabaseSignIn from './components/SupabaseSignIn';
+import VerifiedPracticeCatalog from './pages/VerifiedPracticeCatalog';
+import VerifiedPracticeLeaderboard from './pages/VerifiedPracticeLeaderboard';
+import VerifiedPlayerAnalytics from './pages/VerifiedPlayerAnalytics';
+import VerifiedKYCStatus from './pages/VerifiedKYCStatus';
 import CryptoDepositNetworksPreview from './components/casino/CryptoDepositNetworksPreview';
 import ProfileStats from './pages/ProfileStats';
 import Leaderboard from './pages/Leaderboard';
@@ -86,6 +90,16 @@ const AuthenticatedApp = () => {
   const currentRoute = routeLocation.pathname.replace(/\/+$/, '') || '/';
   // Even excluded users can submit a support request or appeal a restriction.
   if (user?.is_excluded && currentRoute !== '/Support') return <ExclusionBanner />;
+  // Migrated read-only surfaces bypass unsafe legacy pages. Original aesthetics
+  // are retained while unconverted client-authoritative operations stay blocked.
+  if (currentRoute === '/Games')
+    return <LayoutWrapper currentPageName="Games"><VerifiedPracticeCatalog /></LayoutWrapper>;
+  if (currentRoute === '/Leaderboard')
+    return <LayoutWrapper currentPageName="Leaderboard"><VerifiedPracticeLeaderboard /></LayoutWrapper>;
+  if (currentRoute === '/ProfileStats')
+    return <LayoutWrapper currentPageName="ProfileStats"><VerifiedPlayerAnalytics /></LayoutWrapper>;
+  if (currentRoute === '/KYCVerification')
+    return <LayoutWrapper currentPageName="KYCVerification"><VerifiedKYCStatus /></LayoutWrapper>;
   // Server-side functions also deny gameplay mutations. The migration preview
   // must not expose old client-authoritative wagering or identity collection.
   const approvedRoutes = new Set([
