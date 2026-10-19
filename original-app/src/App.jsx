@@ -24,6 +24,7 @@ import VerifiedPracticeCatalog from './pages/VerifiedPracticeCatalog';
 import VerifiedPracticeLeaderboard from './pages/VerifiedPracticeLeaderboard';
 import VerifiedPlayerAnalytics from './pages/VerifiedPlayerAnalytics';
 import VerifiedKYCStatus from './pages/VerifiedKYCStatus';
+import VerifiedAdminUsers from './pages/VerifiedAdminUsers';
 import VerifiedLayout from './components/VerifiedLayout';
 import CryptoDepositNetworksPreview from './components/casino/CryptoDepositNetworksPreview';
 import ProfileStats from './pages/ProfileStats';
@@ -99,6 +100,8 @@ const AuthenticatedApp = () => {
     return <LayoutWrapper currentPageName="ProfileStats"><VerifiedPlayerAnalytics /></LayoutWrapper>;
   if (currentRoute === '/KYCVerification')
     return <LayoutWrapper currentPageName="KYCVerification"><VerifiedKYCStatus /></LayoutWrapper>;
+  if (currentRoute === '/AdminUsers')
+    return <LayoutWrapper currentPageName="AdminUsers"><VerifiedAdminUsers /></LayoutWrapper>;
   // Server-side functions also deny gameplay mutations. The migration preview
   // must not expose old client-authoritative wagering or identity collection.
   const approvedRoutes = new Set([
