@@ -67,6 +67,19 @@ jobs:
           assert.doesNotMatch(client, /service.role|SERVICE_ROLE|settle_v1|private_hole/);
           console.log('Practice poker client guard passed');
           NODE
+      - name: Prevent legacy poker wallet mutations from reappearing
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { readFileSync } from 'node:fs';
+          const screen = readFileSync('original-app/src/pages/PlayPoker.jsx', 'utf8');
+          const app = readFileSync('original-app/src/App.jsx', 'utf8');
+          assert.match(screen, /practicePoker\.snapshot/);
+          assert.match(screen, /practicePoker\.act/);
+          assert.doesNotMatch(screen, /base44|UserWallet\.update|Transaction\.create|SitAndGoTable\.update/);
+          assert.match(app, /'\/PlayPoker'/);
+          console.log('Poker migration UI guard passed');
+          NODE
       - name: Install locked migrated original dependencies
         working-directory: original-app
         run: npm ci --no-audit --no-fund
