@@ -8,6 +8,7 @@ const leaderboard = read('original-app/src/pages/VerifiedPracticeLeaderboard.jsx
 const stats = read('original-app/src/pages/VerifiedPlayerAnalytics.jsx');
 const kyc = read('original-app/src/pages/VerifiedKYCStatus.jsx');
 const fn = read('supabase/functions/ig-player-analytics-v1/index.ts');
+const secureLayout = read('original-app/src/components/VerifiedLayout.jsx');
 
 describe('Base44 migration: safe read-only player surfaces', () => {
   it('uses verified, exclusion-aware route gates before legacy fallback', () => {
@@ -64,4 +65,15 @@ describe('Base44 migration: safe read-only player surfaces', () => {
     expect(kyc).not.toContain('UploadFile(');
     expect(kyc).not.toContain('sendPhoneVerification');
   });
+  it('replaces old global wallet/referral/KYC/chat widgets on approved routes', () => {
+    expect(app).toContain("const LayoutWrapper = ({ children }) => <VerifiedLayout>");
+    expect(secureLayout).toContain("readOwnWallet({ user_email: user.email })");
+    expect(secureLayout).toContain("useAuth()");
+    expect(secureLayout).not.toContain("base44.");
+    for (const legacy of ['ReferralHandler','SupportChatWidget','KYCPrompt','WalletDisplay','media.base44.com']) {
+      expect(secureLayout).not.toContain(legacy + ' />');
+      expect(secureLayout).not.toContain('<' + legacy + ' ');
+    }
+  });
+
 });
