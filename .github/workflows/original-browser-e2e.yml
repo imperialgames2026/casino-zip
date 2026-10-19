@@ -1,0 +1,53 @@
+name: Authenticated original casino browser E2E (staging)
+on:
+  push:
+    branches: [integration/app-scaffold-audit]
+    paths: [scripts/trigger_original_browser_e2e.marker]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser-e2e:
+    concurrency:
+      group: imperial-staging-auth-session
+      cancel-in-progress: false
+    if: github.ref == 'refs/heads/integration/app-scaffold-audit'
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install migrated original casino with locked dependencies
+        working-directory: original-app
+        run: npm ci --no-audit --no-fund
+      - name: Install isolated browser test runtime
+        working-directory: original-app
+        run: |
+          npm install --no-save --no-package-lock --no-audit --no-fund playwright@^1.57.0
+          npx playwright install --with-deps chromium
+      - name: Start original casino staging frontend locally
+        working-directory: original-app
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.STAGING_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.STAGING_SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          npm run dev -- --host 127.0.0.1 --port 4174 > "$RUNNER_TEMP/imperial-vite.log" 2>&1 &
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:4174/ >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/imperial-vite.log"
+          exit 1
+      - name: Test authenticated player and tester screens in Chromium
+        working-directory: original-app
+        env:
+          STAGING_TEST_EMAIL: ${{ secrets.STAGING_TEST_EMAIL }}
+          STAGING_TEST_PASSWORD: ${{ secrets.STAGING_TEST_PASSWORD }}
+          STAGING_READONLY_TEST_EMAIL: ${{ secrets.STAGING_READONLY_TEST_EMAIL }}
+          STAGING_READONLY_TEST_PASSWORD: ${{ secrets.STAGING_READONLY_TEST_PASSWORD }}
+          BROWSER_BASE_URL: http://127.0.0.1:4174
+        run: node scripts/staging-browser-e2e.mjs
