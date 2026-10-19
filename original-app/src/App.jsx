@@ -24,6 +24,7 @@ import VerifiedPracticeCatalog from './pages/VerifiedPracticeCatalog';
 import VerifiedPracticeLeaderboard from './pages/VerifiedPracticeLeaderboard';
 import VerifiedPlayerAnalytics from './pages/VerifiedPlayerAnalytics';
 import VerifiedKYCStatus from './pages/VerifiedKYCStatus';
+import VerifiedLayout from './components/VerifiedLayout';
 import CryptoDepositNetworksPreview from './components/casino/CryptoDepositNetworksPreview';
 import ProfileStats from './pages/ProfileStats';
 import Leaderboard from './pages/Leaderboard';
@@ -41,7 +42,7 @@ import PrizeClaims from './pages/PrizeClaims';
 import AdminSweepstakesAudit from './pages/AdminSweepstakesAudit';
 import AdminIGTSupply from './pages/AdminIGTSupply';
 
-const { Pages, Layout, mainPage } = pagesConfig;
+const { Pages, mainPage } = pagesConfig;
 
 // Guard: blocks excluded users from play pages
 function ExcludedGuard({ children }) {
@@ -57,9 +58,7 @@ function ExcludedGuard({ children }) {
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
 const MainPage = mainPageKey ? Pages[mainPageKey] : <></>;
 
-const LayoutWrapper = ({ children, currentPageName }) => Layout ?
-  <Layout currentPageName={currentPageName}>{children}</Layout>
-  : <>{children}</>;
+const LayoutWrapper = ({ children }) => <VerifiedLayout>{children}</VerifiedLayout>;
 
 const AuthenticatedApp = () => {
   // React Router updates this hook on every client-side navigation.
