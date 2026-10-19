@@ -88,7 +88,7 @@ describe('Base44 migration: safe read-only player surfaces', () => {
     for (const name of filenames) {
       const source = read(name);
       expect(source).not.toContain("from '@/api/base44Client'");
-      expect(source).not.toMatch(/base44\\.(auth|entities|functions)\\./);
+      expect(source).not.toMatch(/base44\.(auth|entities|functions)\./);
     }
     const profile = read('original-app/src/pages/Profile.jsx');
     const weekly = read('original-app/src/components/casino/WeeklyTokenLeaderboard.jsx');
