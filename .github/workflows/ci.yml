@@ -1,7 +1,7 @@
 name: CI
 on:
   push:
-    branches: [main, integration/app-scaffold-audit]
+    branches: [main, integration/app-scaffold-audit, work/poker-frontend-route-20261018]
   pull_request:
     branches: [main]
   workflow_dispatch:
