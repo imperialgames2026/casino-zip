@@ -16,7 +16,7 @@ jobs:
         with:
           node-version: '22'
       - name: Install project dependencies
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
       - name: Check root project types
         run: npm run typecheck
       - name: Run migration and security regression tests
