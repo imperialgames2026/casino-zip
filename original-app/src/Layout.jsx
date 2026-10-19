@@ -91,6 +91,7 @@ export default function Layout({ children, currentPageName }) {
   const navItems = [
     { name: 'Home', icon: Home, page: 'Home' },
     { name: 'Practice Dice', icon: Gamepad2, page: 'PlayDice' },
+    { name: 'Practice Poker (Preview)', icon: Gamepad2, page: 'PokerLobby' },
     { name: 'Profile', icon: User, page: 'Profile' },
     { name: 'History', icon: Wallet, page: 'TransactionHistory' },
     { name: 'Fairness', icon: ShieldCheck, page: 'ProvablyFair' },
