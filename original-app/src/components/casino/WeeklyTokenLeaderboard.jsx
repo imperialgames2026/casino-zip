@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { base44 } from '@/api/base44Client';
+import { requireSupabase } from '@/lib/supabaseClient';
 import { Trophy } from 'lucide-react';
 
 // The preserved original layout uses this card on Home. This read-only replacement
@@ -9,8 +9,13 @@ export default function WeeklyTokenLeaderboard() {
   const { data, isPending, error } = useQuery({
     queryKey: ['staging-practice-leaderboard'],
     queryFn: async () => {
-      const result = await base44.functions.invoke('getWeeklyTokenLeaderboard', {});
-      return result.data;
+      const { data, error } = await requireSupabase().functions.invoke('legacy-leaderboard-v1', {
+        body: { action: 'getWeeklyTokenLeaderboard' },
+      });
+      if (error || data?.success !== true || data?.practiceOnly !== true) {
+        throw new Error(data?.error || error?.message || 'Practice leaderboard unavailable');
+      }
+      return data;
     },
     retry: 1,
     refetchInterval: 60_000,
