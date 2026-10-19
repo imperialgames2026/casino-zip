@@ -24,4 +24,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type-check deployed staging bot function
-        run: deno check supabase/functions/ig-poker-bot-lab/index.ts
+        run: deno check --node-modules-dir=auto supabase/functions/ig-poker-bot-lab/index.ts
