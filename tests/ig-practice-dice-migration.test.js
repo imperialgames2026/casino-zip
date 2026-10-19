@@ -24,11 +24,12 @@ describe('Original casino Dice game converted to zero-wager Supabase practice', 
     expect(dice).toContain('Practice only — no deposits, wagers, rewards, or withdrawals.');
     expect(dice).toContain('No balance changed.');
   });
-  it('adds only this game to allowed preview routes', () => {
+  it('allows only approved Dice and practice poker routes', () => {
     expect(app).toContain("'/PlayDice'");
     expect(app).toContain('!approvedRoutes.has(currentRoute)');
     expect(layout).toContain("page: 'PlayDice'");
-    expect(app).not.toContain("'/PlayPoker',");
+    expect(app).toContain("'/PlayPoker'");
+    expect(app).toContain("'/PokerLobby'");
     expect(app).not.toContain("'/PlaySlots',");
   });
 });
