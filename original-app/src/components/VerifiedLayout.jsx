@@ -78,6 +78,9 @@ export default function VerifiedLayout({ children }) {
             (location.pathname === item.path ? 'bg-amber-400/20 text-amber-200' : 'text-gray-300 hover:bg-white/10 hover:text-white')}>
           <item.icon size={16}/>{item.label}
         </Link>)}
+        {user?.role === 'superadmin' && <Link to="/AdminUsers" onClick={() => setMenu(false)} className="rounded-lg text-sm px-3 py-2 text-amber-200 hover:bg-white/10">
+          User directory
+        </Link>}
         {['admin', 'superadmin'].includes(user?.role) && <Link to="/AdminSupport" onClick={() => setMenu(false)} className="rounded-lg text-sm px-3 py-2 text-gray-300 hover:bg-white/10">
           Staff support
         </Link>}
