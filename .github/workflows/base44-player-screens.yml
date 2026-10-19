@@ -1,0 +1,28 @@
+name: Migrated Player Surfaces
+on:
+  push:
+    branches: [feature/base44-migration-player-surfaces-20261018]
+  pull_request:
+    branches: [integration/app-scaffold-audit]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-root-and-original:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      - name: Install preserved casino
+        working-directory: original-app
+        run: npm ci --no-audit --no-fund
+      - name: Compile Supabase-migrated casino
+        working-directory: original-app
+        run: npm run build
