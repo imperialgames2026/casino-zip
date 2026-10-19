@@ -92,7 +92,7 @@ const AuthenticatedApp = () => {
     '/', '/Home', '/Profile', '/TransactionHistory', '/PrivacyPolicy',
     '/TermsOfService', '/CookiesPolicy', '/ResponsiblePlay',
     '/FairnessManifesto', '/Licensing', '/DepositNetworks', '/ProvablyFair', '/PlayDice',
-    '/Support', '/AdminSupport', '/PlayPoker',
+    '/Support', '/AdminSupport', '/PlayPoker', '/PokerLobby',
   ]);
   if (currentRoute === '/AdminSupport' && !['admin', 'superadmin'].includes(user?.role)) {
     return <main role="alert" style={{padding:32}}>Admin or Superadmin authorization required.</main>;
