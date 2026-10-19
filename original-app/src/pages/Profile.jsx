@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/lib/AuthContext';
-import { base44 } from '@/api/base44Client';
+import { readOwnWallet } from '@/lib/supabaseLegacyReads';
+import { setOneTimeDisplayName } from '@/lib/supabaseIdentity';
 import { ShieldCheck, UserRound, Wallet, BadgeCheck, AlertTriangle } from 'lucide-react';
 
 /**
@@ -18,7 +19,7 @@ export default function Profile() {
   const [notice, setNotice] = useState('');
   const wallets = useQuery({
     queryKey: ['staging-own-profile-wallet', user?.id],
-    queryFn: async () => base44.entities.UserWallet.filter({ user_email: user?.email }),
+    queryFn: async () => readOwnWallet({ user_email: user?.email }),
     enabled: !!user?.id,
     retry: 1,
   });
@@ -38,7 +39,7 @@ export default function Profile() {
     setError('');
     setNotice('');
     try {
-      await base44.functions.invoke('updateUsername', { username: candidate });
+      await setOneTimeDisplayName(candidate);
       await checkUserAuth();
       setNickname('');
       setNotice('Display name saved. Your account determines whether later changes are permitted.');
