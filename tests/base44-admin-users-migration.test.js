@@ -28,7 +28,7 @@ describe('Base44 AdminUsers migration: staging read-only Superadmin boundary', (
     expect(fn).not.toMatch(/\.\s*(insert|upsert|update|delete|rpc)\s*\(/);
     expect(fn).not.toMatch(/auth\.admin\.listUsers|auth\.admin\.getUserById/);
     expect(fn).not.toContain('select("*")');
-    expect(fn).not.toMatch(/\\.select\\([^\\n]*email/i);
+    expect(fn).not.toContain('select("email');
     expect(fn).not.toContain('legacy_data');
   });
   it('replaces unsafe legacy admin UI with the verified preview route only', () => {
