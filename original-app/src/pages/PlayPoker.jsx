@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { practicePoker } from '@/lib/practicePoker';
+import { requireSupabase } from '@/lib/supabaseClient';
 
 /** Server-authoritative play-money Hold'em preview. No deposits, payouts, or client settlements. */
 export default function PlayPoker() {
@@ -10,6 +11,7 @@ export default function PlayPoker() {
   const [status, setStatus] = useState('Ready to create or join a practice table.');
   const [busy, setBusy] = useState(false);
   const [bet, setBet] = useState('');
+  const [botLabels, setBotLabels] = useState({});
   const inFlight = useRef(false);
   const refresh = useCallback(async (id = tableId) => {
     if (!id || inFlight.current) return;
@@ -24,6 +26,23 @@ export default function PlayPoker() {
     const timer = setInterval(() => refresh(tableId), 2500);
     return () => clearInterval(timer);
   }, [tableId, refresh]);
+  useEffect(() => {
+    if (!tableId) { setBotLabels({}); return; }
+    let open = true;
+    const lookup = async () => {
+      const { data, error } = await requireSupabase().functions.invoke('ig-poker-bot-lab', {
+        body: { action: 'roster', tableId },
+      });
+      if (!open) return;
+      if (error || data?.practiceOnly !== true || !Array.isArray(data.bots)) {
+        setBotLabels({});
+        return;
+      }
+      setBotLabels(Object.fromEntries(data.bots.map(bot => [bot.seatNo, bot.name])));
+    };
+    void lookup();
+    return () => { open = false; };
+  }, [tableId]);
   async function run(task) {
     if (busy) return;
     setBusy(true);
@@ -78,7 +97,7 @@ export default function PlayPoker() {
         <p className="my-5 text-2xl font-bold">Practice Pot: {seats.reduce((a, s) => a + (Number(s.committed) || 0), 0)} chips</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {seats.map(s => <div key={s.seat_no} className="bg-black/30 rounded-xl p-3 text-left">
-            <p className="font-semibold">Seat {s.seat_no} {s.folded ? '(folded)' : s.all_in ? '(all-in)' : ''}</p>
+            <p className="font-semibold">{botLabels[s.seat_no] || 'Seat '+s.seat_no} {s.folded ? '(folded)' : s.all_in ? '(all-in)' : ''}</p>
             <p className="text-sm text-emerald-200">{s.stack} chips · bet {s.street_bet}</p>
           </div>)}
         </div>
