@@ -42,7 +42,7 @@ export default function PlayPoker() {
     };
     void lookup();
     return () => { open = false; };
-  }, [tableId]);
+  }, [tableId, snapshot?.seats?.length]);
   async function run(task) {
     if (busy) return;
     setBusy(true);
