@@ -2,10 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { practicePoker } from '@/lib/practicePoker';
 import { practicePokerEvents } from '@/lib/practicePokerEvents';
+import { useAuth } from '@/lib/AuthContext';
 
 /** Practice-only multiplayer poker lobby. Real-money buy-ins and legacy client wallets are disabled. */
 export default function PokerLobby() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
@@ -46,6 +48,10 @@ export default function PokerLobby() {
         </button>
       </header>
 
+      {user?.role === 'superadmin' && <Link to="/PokerBotLab"
+        className="inline-block mb-5 rounded-xl border border-amber-400/50 bg-amber-500/10 px-5 py-3 font-bold text-amber-200">
+        🤖 AI Poker Test Lab · Superadmin
+      </Link>}
       <div className="bg-slate-800 border border-slate-700 p-4 rounded-xl flex flex-wrap gap-3">
         <label className="flex-1 min-w-52 text-sm">Join a friend's practice table
           <input aria-label="Friend's table ID" value={joinId} onChange={e => setJoinId(e.target.value.trim())}
