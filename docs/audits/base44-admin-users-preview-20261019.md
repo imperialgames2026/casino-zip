@@ -21,3 +21,10 @@
 Historic Base44 functions and entity definitions outside this surface; original financial settlement, rewards, referrals, KYC provider workflows, withdrawals, account modifications, and game releases. Separate Crash/Trenball, Craps, Poker and other game branches need reconciliation and multi-session testing.
 
 **Do not merge into main or expose on a public domain without authenticated E2E, independent authorization/privacy review and explicit release approval.**
+
+## Verified staging milestone — 2026-10-19 UTC
+- GitHub Actions full root tests/types/build and original-app build succeeded on commit `4259493be17d` (CI run `39200690280`).
+- Deployed the function to the existing `imperial-games-staging` Supabase project: `ig-admin-users-preview-v1` **ACTIVE v1**, with `verify_jwt=true`.
+- A read-only database count showed 6 staging profiles and one configured Superadmin role. No profile or role data was changed.
+- **Still unverified:** real authenticated Superadmin browser result, explicit Tester/Admin 403 responses, anonymous HTTP request, exclusion regression, and any production route behavior. The container runtime could not resolve the staging endpoint hostname for an unauthenticated probe.
+- The frontend exists only in the draft development branch. It has **not** been deployed to the live Cloudflare website.
